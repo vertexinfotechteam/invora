@@ -1,0 +1,31 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+coverage/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+
+# Env — never commit real secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Test artifacts
+playwright-report/
+test-results/
+.playwright/
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/

@@ -1,0 +1,21 @@
+{
+  "extends": ["next/core-web-vitals"],
+  "overrides": [
+    {
+      "files": ["components/**/*.tsx", "components/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["**/lib/supabase/admin", "**/lib/ai/client", "**/lib/ai/gemini-client"],
+                "message": "Server-only module. components/** may render on the client — keep this import inside app/**, lib/documents/**, lib/guards/**, lib/ai/** server modules, or a route handler instead."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

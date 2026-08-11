@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Invora brand tokens.
+ *
+ * Warm cream for structure, deep forest-green for action, and a separate
+ * (unchanged) success green reserved *only* for paid/success — the two are
+ * kept as distinct hues on purpose so a "paid" badge never gets lost among
+ * ordinary primary buttons.
+ */
+@layer base {
+  :root {
+    --background: 36 29% 97%;
+    --foreground: 26 9% 16%;
+
+    --card: 40 33% 98%;
+    --card-foreground: 26 9% 16%;
+    --popover: 40 33% 98%;
+    --popover-foreground: 26 9% 16%;
+
+    --primary: 165 95% 17%; /* deep forest-teal green */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 36 20% 92%;
+    --secondary-foreground: 26 9% 16%;
+
+    --muted: 36 20% 93%;
+    --muted-foreground: 30 8% 40%;
+
+    --accent: 165 40% 92%;
+    --accent-foreground: 165 60% 20%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 71% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 26 83% 14%;
+
+    --border: 35 26% 87%;
+    --input: 35 26% 87%;
+    --ring: 165 95% 17%;
+
+    --radius: 0.6rem;
+  }
+
+  /*
+   * Dark mode is a warm charcoal, not black or navy — kept a few notches
+   * lighter than near-black so it reads as a deliberate warm surface rather
+   * than the absence of one.
+   */
+  .dark {
+    --background: 30 10% 11%;
+    --foreground: 36 20% 95%;
+    --card: 30 9% 15%;
+    --card-foreground: 36 20% 95%;
+    --popover: 30 9% 15%;
+    --popover-foreground: 36 20% 95%;
+    --primary: 160 70% 45%;
+    --primary-foreground: 30 10% 10%;
+    --secondary: 30 8% 20%;
+    --secondary-foreground: 36 20% 95%;
+    --muted: 30 8% 18%;
+    --muted-foreground: 36 10% 65%;
+    --accent: 160 30% 22%;
+    --accent-foreground: 150 50% 88%;
+    --destructive: 0 70% 60%;
+    --destructive-foreground: 30 10% 10%;
+    --success: 142 55% 48%;
+    --success-foreground: 30 10% 10%;
+    --warning: 38 90% 58%;
+    --warning-foreground: 26 60% 13%;
+    --border: 30 8% 24%;
+    --input: 30 8% 24%;
+    --ring: 160 70% 45%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* Numbers in tables must line up. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer components {
+  .card-surface {
+    @apply rounded-xl border border-border bg-card;
+  }
+
+  .skeleton {
+    @apply relative overflow-hidden rounded-md bg-muted;
+  }
+  .skeleton::after {
+    @apply absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-foreground/10 to-transparent;
+    content: '';
+  }
+
+  /*
+   * Marketing hero background — flat and warm, not a glow. The reference
+   * design (useunitpay.com) uses plain cream sections with no gradient
+   * lighting effects, so this is a near-flat warm tint rather than a spotlight.
+   */
+  .hero-glow {
+    background: hsl(var(--muted) / 0.6);
+  }
+  .dark .hero-glow {
+    background: hsl(var(--muted) / 0.5);
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
