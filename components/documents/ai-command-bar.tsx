@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatPaise } from '@/lib/money';
 import { cn } from '@/lib/utils';
+import type { TaxMode } from '@/lib/calc/totals';
 import type { EditorLine } from '@/components/documents/types';
 
 interface Preview {
@@ -43,12 +44,16 @@ export function AiCommandBar({
   docType,
   docId,
   lines,
+  docDiscountPct,
+  taxMode,
   onApply,
   disabled,
 }: {
   docType: 'quotation' | 'invoice';
   docId: string | null;
   lines: EditorLine[];
+  docDiscountPct: number;
+  taxMode: TaxMode;
   onApply: (next: { lines: EditorLine[]; docDiscountPct: number }) => void;
   disabled?: boolean;
 }) {
@@ -72,7 +77,25 @@ export function AiCommandBar({
       const response = await fetch('/api/ai/command', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ doc_type: docType, doc_id: docId, command }),
+        body: JSON.stringify({
+          doc_type: docType,
+          doc_id: docId,
+          command,
+          // What's on screen right now — not what was last autosaved — so an
+          // edit made in the last couple of seconds is never silently
+          // reverted when a command applies on top of it.
+          lines: lines.map((line) => ({
+            name: line.name,
+            description: line.description,
+            unit: line.unit,
+            qty: line.qty,
+            rate_paise: line.rate_paise,
+            discount_pct: line.discount_pct,
+            tax_rate: line.tax_rate,
+          })),
+          doc_discount_pct: docDiscountPct,
+          tax_mode: taxMode,
+        }),
       });
       const payload = await response.json();
 

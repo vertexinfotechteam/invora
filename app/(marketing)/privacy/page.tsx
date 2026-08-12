@@ -46,23 +46,26 @@ export default function PrivacyPage() {
 
       <Clause heading="How AI requests are handled">
         <p>
-          AI features run server-side. Your browser never talks to the AI provider directly. When
-          you use an AI feature we send Anthropic the text needed for that specific request — your
-          brief, the relevant document fields, your catalog item names — and receive a draft back.
+          AI features run server-side. Your browser never talks to an AI provider directly. When
+          you use an AI feature we send the text needed for that specific request — your brief,
+          the relevant document fields, your catalog item names — to the AI provider configured
+          on our servers (currently Anthropic&apos;s Claude models and/or Google&apos;s Gemini
+          models, depending on the feature and which is active at the time), and receive a draft
+          back.
         </p>
         <p>
           We log metadata about each request (which feature, which model, token counts, latency,
           success or failure) so we can meter usage and control cost. We do not use your content to
-          train models.
+          train models, and no provider we use is instructed to retain your content for training.
         </p>
       </Clause>
 
       <Clause heading="Who we share data with">
         <p>
           Our processors are: Supabase (database, authentication and file storage), Vercel
-          (application hosting), Anthropic (AI processing), Razorpay (payments), Resend (email
-          delivery), Upstash (rate limiting) and Sentry (error monitoring). Each receives only what
-          it needs to perform its function.
+          (application hosting), Anthropic and/or Google (AI processing — see above), Razorpay
+          (payments), Resend (email delivery), Upstash (rate limiting) and Sentry (error
+          monitoring). Each receives only what it needs to perform its function.
         </p>
         <p>We do not sell personal data, and we do not share it for advertising.</p>
       </Clause>

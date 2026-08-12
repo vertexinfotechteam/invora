@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
@@ -27,6 +28,42 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
 );
 Input.displayName = 'Input';
 
+/**
+ * A password field with a show/hide toggle — so a mistyped password is
+ * caught before submitting, not after a failed sign-in.
+ *
+ * `type` is not accepted as a prop: the field is always semantically a
+ * password (autofill/password-manager behaviour depends on this), only its
+ * *visibility* toggles between `type="password"` and `type="text"`.
+ */
+const PasswordInput = React.forwardRef<HTMLInputElement, Omit<InputProps, 'type'>>(
+  ({ className, ...props }, ref) => {
+    const [visible, setVisible] = React.useState(false);
+
+    return (
+      <div className="relative">
+        <Input
+          ref={ref}
+          type={visible ? 'text' : 'password'}
+          className={cn('pr-10', className)}
+          {...props}
+        />
+        <button
+          type="button"
+          onClick={() => setVisible((current) => !current)}
+          aria-label={visible ? 'Hide password' : 'Show password'}
+          aria-pressed={visible}
+          tabIndex={-1}
+          className="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+        >
+          {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
+    );
+  },
+);
+PasswordInput.displayName = 'PasswordInput';
+
 const Textarea = React.forwardRef<
   HTMLTextAreaElement,
   React.TextareaHTMLAttributes<HTMLTextAreaElement> & { invalid?: boolean }
@@ -46,4 +83,4 @@ const Textarea = React.forwardRef<
 ));
 Textarea.displayName = 'Textarea';
 
-export { Input, Textarea };
+export { Input, PasswordInput, Textarea };

@@ -46,6 +46,9 @@ export interface PdfDocumentData {
 
   currency: string;
   locale: string;
+  /** Determines whether "Subtotal" (below) can honestly claim to be the sum
+   * of the printed line amounts — see the comment on that field. */
+  taxMode: 'exclusive' | 'inclusive';
 
   from: PdfParty;
   to: PdfParty | null;
@@ -54,6 +57,9 @@ export interface PdfDocumentData {
 
   lines: PdfLine[];
 
+  /** Tax-exclusive value. In `taxMode: 'inclusive'` this is *not* the sum of
+   * the printed per-line amounts (those are tax-inclusive) — TotalsBlock
+   * labels it accordingly so the two don't read as a math error. */
   subtotalPaise: number;
   discountPaise: number;
   docDiscountPct: number;

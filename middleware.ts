@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { asSessionCookie } from '@/lib/supabase/session-cookie';
 
 const PROTECTED_PREFIXES = [
   '/dashboard', '/customers', '/products', '/quotations', '/invoices',
@@ -30,7 +31,7 @@ export async function middleware(request: NextRequest) {
           }
           response = NextResponse.next({ request });
           for (const { name, value, options } of cookiesToSet) {
-            response.cookies.set(name, value, options);
+            response.cookies.set(name, value, asSessionCookie(options));
           }
         },
       },

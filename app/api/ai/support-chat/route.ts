@@ -4,12 +4,14 @@ import { z } from 'zod';
 import { badRequest, withApiErrors } from '@/lib/guards/errors';
 import { clientIp, enforceRateLimit } from '@/lib/guards/rate-limit';
 import { callGemini } from '@/lib/ai/gemini-client';
+import { callClaudeChat } from '@/lib/ai/client';
+import { resolveAiProvider } from '@/lib/ai/provider';
 import { logAiUsage } from '@/lib/ai/logging';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const FALLBACK_MODEL_LABEL = 'gemini-flash-latest';
+const FALLBACK_MODEL_LABEL = 'unknown';
 
 const messageSchema = z.object({
   role: z.enum(['user', 'assistant']),
@@ -75,18 +77,27 @@ export const POST = withApiErrors(async (request: NextRequest) => {
 
   const startedAt = Date.now();
 
-  // Gemini's roles are 'user' / 'model' — mapped here so the widget's public
-  // history contract ('user' / 'assistant') doesn't leak a provider detail.
-  const turns = [
-    ...parsed.data.history.map((turn) => ({
-      role: turn.role === 'assistant' ? ('model' as const) : ('user' as const),
-      content: turn.content,
-    })),
-    { role: 'user' as const, content: parsed.data.message },
-  ];
-
   try {
-    const result = await callGemini(SYSTEM_PROMPT, turns);
+    const provider = resolveAiProvider();
+    const result =
+      provider === 'gemini'
+        ? await callGemini(
+            SYSTEM_PROMPT,
+            // Gemini's roles are 'user' / 'model' — mapped here so the
+            // widget's public history contract ('user' / 'assistant')
+            // doesn't leak a provider detail.
+            [
+              ...parsed.data.history.map((turn) => ({
+                role: turn.role === 'assistant' ? ('model' as const) : ('user' as const),
+                content: turn.content,
+              })),
+              { role: 'user' as const, content: parsed.data.message },
+            ],
+          )
+        : await callClaudeChat(SYSTEM_PROMPT, [
+            ...parsed.data.history.map((turn) => ({ role: turn.role, content: turn.content })),
+            { role: 'user' as const, content: parsed.data.message },
+          ]);
     const latencyMs = Date.now() - startedAt;
 
     void logAiUsage({

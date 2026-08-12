@@ -112,11 +112,11 @@ export function LineItemsEditor({
             <tr className="border-b border-border bg-muted/40 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
               <th className="w-8 px-2 py-2" aria-label="Reorder handle" />
               <th className="px-2 py-2 font-medium">Item</th>
-              <th className="w-24 px-2 py-2 text-right font-medium">Qty</th>
-              <th className="w-20 px-2 py-2 font-medium">Unit</th>
+              <th className="w-20 px-2 py-2 text-right font-medium">Qty</th>
+              <th className="w-28 px-2 py-2 font-medium">Unit</th>
               <th className="w-32 px-2 py-2 text-right font-medium">Rate</th>
-              <th className="w-20 px-2 py-2 text-right font-medium">Disc %</th>
-              <th className="w-20 px-2 py-2 text-right font-medium">Tax %</th>
+              <th className="w-24 px-2 py-2 text-right font-medium">Disc %</th>
+              <th className="w-24 px-2 py-2 text-right font-medium">Tax %</th>
               <th className="w-32 px-2 py-2 text-right font-medium">Amount</th>
               <th className="w-10 px-2 py-2" aria-label="Remove" />
             </tr>
@@ -165,7 +165,7 @@ export function LineItemsEditor({
                     min={0}
                     step="0.001"
                     value={line.qty}
-                    onChange={(event) => update(index, { qty: Number(event.target.value) || 0 })}
+                    onChange={(event) => update(index, { qty: clampQty(Number(event.target.value)) })}
                     className="text-right tabular"
                     aria-label={`Line ${index + 1} quantity`}
                   />
@@ -275,7 +275,7 @@ export function LineItemsEditor({
                   min={0}
                   step="0.001"
                   value={line.qty}
-                  onChange={(event) => update(index, { qty: Number(event.target.value) || 0 })}
+                  onChange={(event) => update(index, { qty: clampQty(Number(event.target.value)) })}
                   className="mt-1 tabular"
                 />
               </label>
@@ -337,6 +337,13 @@ export function LineItemsEditor({
 function clampPercent(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.min(100, Math.max(0, value));
+}
+
+/** computeTotals throws on a negative quantity — the input's `min={0}` alone
+ * does not block typed negative values, so this is the real guard. */
+function clampQty(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, value);
 }
 
 /**

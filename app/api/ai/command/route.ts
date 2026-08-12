@@ -33,31 +33,25 @@ export const POST = withApiErrors(async (request: NextRequest) => {
 
   const supabase = await createSupabaseServerClient();
   const table = input.doc_type === 'quotation' ? 'quotations' : 'invoices';
-  const itemsTable = input.doc_type === 'quotation' ? 'quotation_items' : 'invoice_items';
-  const fk = input.doc_type === 'quotation' ? 'quotation_id' : 'invoice_id';
 
-  const { data: doc } = await supabase
-    .from(table)
-    .select('id, doc_discount_pct, tax_mode, scope, notes, terms, payment_terms')
-    .eq('id', input.doc_id)
-    .maybeSingle();
+  // Only for ownership (RLS-scoped: a document belonging to another business
+  // reads back as not-found) and `scope`, which the prompt needs. The lines,
+  // discount and tax mode themselves come from the request body — what's
+  // actually on screen right now, not a fresh database read — otherwise an
+  // edit made in the few seconds before autosave fires would be silently
+  // discarded the moment a command is applied on top of it.
+  const { data: doc } = await supabase.from(table).select('id, scope').eq('id', input.doc_id).maybeSingle();
 
   if (!doc) throw notFound('Document not found.');
 
-  const { data: items } = await supabase
-    .from(itemsTable)
-    .select('name, qty, rate_paise, discount_pct, tax_rate, unit, description')
-    .eq(fk, input.doc_id)
-    .order('position', { ascending: true });
-
-  const lines: CommandLine[] = (items ?? []).map((item) => ({
-    name: item.name,
-    qty: Number(item.qty),
-    rate_paise: item.rate_paise,
-    discount_pct: Number(item.discount_pct),
-    tax_rate: Number(item.tax_rate),
-    unit: item.unit,
-    description: item.description,
+  const lines: CommandLine[] = input.lines.map((line) => ({
+    name: line.name,
+    qty: line.qty,
+    rate_paise: line.rate_paise,
+    discount_pct: line.discount_pct,
+    tax_rate: line.tax_rate,
+    unit: line.unit,
+    description: line.description,
   }));
 
   const planResult = await runStructuredAi(
@@ -69,7 +63,7 @@ export const POST = withApiErrors(async (request: NextRequest) => {
         command: input.command,
         docType: input.doc_type,
         lineNames: lines.map((line) => line.name),
-        currentDiscountPct: Number(doc.doc_discount_pct),
+        currentDiscountPct: input.doc_discount_pct,
         hasScope: Boolean((doc as { scope?: string | null }).scope),
       }),
       schema: CommandPlanSchema,
@@ -82,8 +76,8 @@ export const POST = withApiErrors(async (request: NextRequest) => {
   const preview = applyCommandPlan(
     {
       lines,
-      docDiscountPct: Number(doc.doc_discount_pct),
-      taxMode: doc.tax_mode as TaxMode,
+      docDiscountPct: input.doc_discount_pct,
+      taxMode: input.tax_mode as TaxMode,
     },
     plan,
   );

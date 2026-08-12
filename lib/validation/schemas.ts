@@ -271,10 +271,32 @@ export const aiRewriteRequestSchema = z.object({
   target_language: z.string().trim().max(30).optional(),
 });
 
+/**
+ * Deliberately more lenient than lineItemSchema: this describes whatever is
+ * currently on screen (including a fresh blank row with no name yet), not
+ * something about to be persisted, so nothing here should be required.
+ */
+const commandLineSchema = z.object({
+  name: z.string().max(200).default(''),
+  description: z.string().max(2000).nullable().optional(),
+  unit: z.string().max(24).default('unit'),
+  qty: qtySchema.default(0),
+  rate_paise: paiseSchema.default(0),
+  discount_pct: percentSchema.default(0),
+  tax_rate: percentSchema.default(0),
+});
+
 export const aiCommandRequestSchema = z.object({
   doc_type: z.enum(['quotation', 'invoice']),
   doc_id: uuidSchema,
   command: z.string().trim().min(2, 'Type a command.').max(500),
+  // The command bar operates on what's on screen right now, not the last
+  // autosaved snapshot — the server previously re-fetched the document's
+  // lines/discount from the database, which meant unsaved edits made in the
+  // ~2s before autosave could be silently discarded when a command applied.
+  lines: z.array(commandLineSchema).max(200),
+  doc_discount_pct: percentSchema,
+  tax_mode: taxModeSchema,
 });
 
 // ---------------------------------------------------------------------------

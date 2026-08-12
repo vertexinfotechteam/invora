@@ -5,12 +5,18 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
  * Webhook handler contract.
  *
  * The Supabase admin client is mocked so these run with no infrastructure. The
- * three properties under test are the ones that decide whether payments are
+ * properties under test are the ones that decide whether payments are
  * trustworthy:
  *
  *   1. A tampered signature is rejected with 400 and nothing is written.
  *   2. Replaying an event five times creates exactly one payment row.
  *   3. A genuine processing failure returns 5xx so Razorpay retries.
+ *   4. Invoice attribution comes from the Order (server-set, never
+ *      client-writable) — never from `payment.notes`, which Razorpay
+ *      Checkout.js lets any visitor set directly, order it against. A real
+ *      `payment.captured` event does not embed the order entity, so the
+ *      handler falls back to fetching the Order by `payment.order_id`;
+ *      that fetch is mocked here via lib/razorpay/client.
  */
 
 const WEBHOOK_SECRET = 'whsec_test';
@@ -95,7 +101,10 @@ function signedRequest(body: string, signature: string) {
   });
 }
 
-function paymentCapturedBody() {
+/** `paymentNotes` defaults to empty: a real Razorpay `payment.captured` event
+ * has no `invoice_id` of its own to give it — this only exists so the exploit
+ * test below can simulate an attacker setting one via Checkout.js. */
+function paymentCapturedBody(paymentNotes: Record<string, string> = {}) {
   return JSON.stringify({
     event: 'payment.captured',
     created_at: Math.floor(Date.now() / 1000),
@@ -107,11 +116,22 @@ function paymentCapturedBody() {
           currency: 'INR',
           method: 'upi',
           order_id: 'order_TEST',
-          notes: { invoice_id: 'inv-1', business_id: 'biz-1' },
+          notes: paymentNotes,
         },
       },
     },
   });
+}
+
+/** The real, trustworthy source of `invoice_id`: the Order, fetched by
+ * `payment.order_id` since a `payment.captured` webhook doesn't embed it. */
+function mockRazorpayOrders(notes: Record<string, string> | null) {
+  vi.doMock('@/lib/razorpay/client', () => ({
+    getRazorpay: () => ({
+      orders: { fetch: vi.fn().mockResolvedValue({ notes: notes ?? {} }) },
+    }),
+    planCodeForRazorpayPlan: () => null,
+  }));
 }
 
 function sign(body: string) {
@@ -160,6 +180,7 @@ describe('POST /api/webhooks/razorpay', () => {
     vi.doMock('@/lib/supabase/admin', () => ({ createSupabaseAdminClient: () => mock.admin }));
     vi.doMock('@/lib/email/send', () => ({ sendEmail: vi.fn().mockResolvedValue({ sent: true }) }));
     vi.doMock('@/lib/events', () => ({ recordDocumentEvent: vi.fn() }));
+    mockRazorpayOrders({ invoice_id: 'inv-1', business_id: 'biz-1' });
 
     const { POST } = await import('@/app/api/webhooks/razorpay/route');
     const body = paymentCapturedBody();
@@ -174,6 +195,30 @@ describe('POST /api/webhooks/razorpay', () => {
     // Every delivery is acknowledged; only the first does any work.
     expect(statuses).toEqual([200, 200, 200, 200, 200]);
     expect(mock.paymentInserts).toHaveLength(1);
+  });
+
+  it('ignores an attacker-supplied payment.notes.invoice_id and only credits the Order-attributed invoice', async () => {
+    // Checkout.js lets whoever opens the widget set `notes` on the resulting
+    // Payment directly — a visitor can do this against their own real
+    // order_id while pointing invoice_id at someone else's invoice. The Order
+    // itself (fetched by order_id, mocked below) is the only source that
+    // matters; if the fix regresses, this event would attempt to credit
+    // 'someone-elses-invoice' instead of (or as well as) 'inv-1'.
+    const mock = buildMockAdmin();
+    vi.doMock('@/lib/supabase/admin', () => ({ createSupabaseAdminClient: () => mock.admin }));
+    vi.doMock('@/lib/email/send', () => ({ sendEmail: vi.fn().mockResolvedValue({ sent: true }) }));
+    vi.doMock('@/lib/events', () => ({ recordDocumentEvent: vi.fn() }));
+    mockRazorpayOrders({ invoice_id: 'inv-1', business_id: 'biz-1' });
+
+    const { POST } = await import('@/app/api/webhooks/razorpay/route');
+    const body = paymentCapturedBody({ invoice_id: 'someone-elses-invoice', business_id: 'other-biz' });
+    const signature = sign(body);
+
+    const response = await POST(signedRequest(body, signature) as never);
+
+    expect(response.status).toBe(200);
+    expect(mock.paymentInserts).toHaveLength(1);
+    expect((mock.paymentInserts[0] as { invoice_id: string }).invoice_id).toBe('inv-1');
   });
 
   it('acknowledges an event type it does not handle rather than erroring', async () => {

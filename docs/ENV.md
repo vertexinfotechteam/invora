@@ -39,7 +39,15 @@ console.anthropic.com → API Keys. **Set a monthly spend limit on the key befor
 
 | Variable | Public | Required | Notes |
 |---|---|---|---|
-| `ANTHROPIC_API_KEY` | ❌ | For AI features | Read only by `lib/ai/client.ts`. Without it, AI routes return a clean error and the rest of the product works. |
+| `ANTHROPIC_API_KEY` | ❌ | For AI features | Read only by `lib/ai/client.ts`. |
+
+## Gemini
+
+aistudio.google.com/apikey.
+
+| Variable | Public | Required | Notes |
+|---|---|---|---|
+| `GEMINI_API_KEY` | ❌ | For AI features (if not using Anthropic) | Automatic fallback for every AI feature — `lib/ai/provider.ts` picks Anthropic if `ANTHROPIC_API_KEY` is set, otherwise this. Set at least one of the two, or AI routes return a clean "not configured" error. |
 
 ## Razorpay
 

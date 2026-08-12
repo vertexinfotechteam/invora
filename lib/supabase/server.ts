@@ -2,6 +2,7 @@ import 'server-only';
 
 import { cookies } from 'next/headers';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { asSessionCookie } from '@/lib/supabase/session-cookie';
 
 /**
  * Request-scoped client for Server Components, Server Actions and route
@@ -25,7 +26,7 @@ export async function createSupabaseServerClient() {
         setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           try {
             for (const { name, value, options } of cookiesToSet) {
-              cookieStore.set(name, value, options);
+              cookieStore.set(name, value, asSessionCookie(options));
             }
           } catch {
             // Called from a Server Component render, where cookies are

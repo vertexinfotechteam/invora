@@ -55,8 +55,9 @@ export default function TermsPage() {
           suggestion that you must explicitly accept.
         </p>
         <p>
-          AI requests are processed on our servers by Anthropic&apos;s Claude models. We send the
-          relevant document context needed to fulfil your request and nothing else.
+          AI requests are processed on our servers, by Anthropic&apos;s Claude models and/or
+          Google&apos;s Gemini models depending on the feature and provider availability. We send
+          the relevant document context needed to fulfil your request and nothing else.
         </p>
       </Clause>
 

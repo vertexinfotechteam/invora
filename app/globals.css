@@ -122,6 +122,35 @@
   .dark .hero-glow {
     background: hsl(var(--muted) / 0.5);
   }
+
+  /*
+   * The sticky marketing nav sits directly on top of a .hero-glow section on
+   * every marketing page — it shares that same muted tint (rather than
+   * --background) so there is no visible colour seam at the boundary.
+   */
+  .marketing-nav-surface {
+    background: hsl(var(--muted) / 0.82);
+  }
+  .dark .marketing-nav-surface {
+    background: hsl(var(--muted) / 0.75);
+  }
+}
+
+/*
+ * .animate-reveal-up and .animate-float are applied directly (the hero's
+ * load-in and the AI section's floating icons bypass the Reveal component,
+ * which already handles prefers-reduced-motion itself via motion-reduce: —
+ * this covers the two raw Tailwind animation utilities everywhere else they
+ * are used, in one place, instead of a motion-reduce: variant at every call
+ * site.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .animate-reveal-up,
+  .animate-float {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media print {

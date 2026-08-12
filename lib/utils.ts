@@ -46,8 +46,16 @@ export function relativeTime(value: string | Date | null | undefined): string {
   return formatter.format(deltaSeconds, 'second');
 }
 
+// Invora is an India-only product today (GSTIN, UPI, ₹ throughout) — "today"
+// means the calendar date in India Standard Time, not the server's UTC date.
+// Truncating raw UTC to a date string is wrong for roughly 5.5 hours of every
+// day (00:00–05:30 IST, while the UTC date string still reads as "yesterday"):
+// a document created then would silently date itself a day early, and a cron
+// job invoked then would compare due dates against the wrong "today".
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
 export function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return new Date(Date.now() + IST_OFFSET_MS).toISOString().slice(0, 10);
 }
 
 export function addDaysIso(iso: string, days: number): string {

@@ -9,7 +9,7 @@ import { Field } from '@/components/ui/field';
 
 const initialState: FormState = { ok: false };
 
-export function ContactForm() {
+export function ContactForm({ defaultMessage }: { defaultMessage?: string }) {
   const [state, formAction, pending] = useActionState(submitContactAction, initialState);
 
   if (state.ok) {
@@ -59,6 +59,7 @@ export function ContactForm() {
         <Textarea
           name="message"
           rows={5}
+          defaultValue={defaultMessage}
           placeholder="I'd like to ask about…"
           required
           invalid={Boolean(state.errors?.message)}

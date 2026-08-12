@@ -119,6 +119,7 @@ export async function loadDocumentPdfData(
     ),
     currency: doc.currency || business.currency,
     locale,
+    taxMode: doc.tax_mode,
     from: businessParty(business),
     to: customerParty((customer as Customer | null) ?? null),
     logoUrl: business.logo_url,

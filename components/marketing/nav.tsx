@@ -33,7 +33,7 @@ export function MarketingNav() {
   }
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/70 bg-background/85 backdrop-blur-md">
+    <header className="marketing-nav-surface sticky top-0 z-40 w-full border-b border-border/70 backdrop-blur-md">
       <nav className="container flex h-16 items-center justify-between" aria-label="Main">
         <Link href="/" onClick={goHome} className="flex items-center gap-2.5">
           <InvoraMark />

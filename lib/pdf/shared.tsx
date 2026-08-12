@@ -138,8 +138,13 @@ export function LineItemsTable({ data, accent }: { data: PdfDocumentData; accent
 }
 
 export function TotalsBlock({ data, accent }: { data: PdfDocumentData; accent: string }) {
+  // In inclusive mode, subtotalPaise is the tax-*exclusive* value — it will
+  // never equal the sum of the printed (tax-inclusive) per-line amounts, so
+  // labelling it "Subtotal" reads as a math error. "Taxable value" is the
+  // term Indian GST invoices already use for exactly this figure.
+  const subtotalLabel = data.taxMode === 'inclusive' ? 'Taxable value' : 'Subtotal';
   const rows: { label: string; value: string; strong?: boolean }[] = [
-    { label: 'Subtotal', value: money(data.subtotalPaise, data) },
+    { label: subtotalLabel, value: money(data.subtotalPaise, data) },
   ];
 
   if (data.discountPaise > 0) {

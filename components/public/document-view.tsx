@@ -129,7 +129,14 @@ export function PublicDocumentView({
 
           <div className="border-t border-border p-6">
             <dl className="ml-auto max-w-xs space-y-2 text-sm">
-              <Row label="Subtotal" value={formatPaise(doc.subtotal_paise as number, doc.currency)} />
+              <Row
+                // Inclusive mode: subtotal_paise is tax-exclusive, so it will
+                // never equal the sum of the (tax-inclusive) per-line amounts
+                // shown in the table above — labelled accordingly so it
+                // doesn't read as a math error to the customer.
+                label={doc.tax_mode === 'inclusive' ? 'Taxable value' : 'Subtotal'}
+                value={formatPaise(doc.subtotal_paise as number, doc.currency)}
+              />
               {(doc.discount_paise as number) > 0 ? (
                 <Row
                   label="Discount"

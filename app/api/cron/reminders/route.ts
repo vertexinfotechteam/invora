@@ -8,7 +8,7 @@ import { recordDocumentEvent } from '@/lib/events';
 import { sendEmail } from '@/lib/email/send';
 import { reminderEmail } from '@/lib/email/templates';
 import { formatPaise } from '@/lib/money';
-import { formatDate } from '@/lib/utils';
+import { formatDate, todayIso } from '@/lib/utils';
 import { buildShareUrl, generateShareToken } from '@/lib/share/tokens';
 
 export const runtime = 'nodejs';
@@ -32,7 +32,7 @@ export const GET = withApiErrors(async (request: NextRequest) => {
 
   const admin = createSupabaseAdminClient();
   const now = new Date();
-  const today = now.toISOString().slice(0, 10);
+  const today = todayIso();
 
   const { data: candidates } = await admin
     .from('invoices')

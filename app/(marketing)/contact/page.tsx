@@ -8,22 +8,36 @@ export const metadata: Metadata = {
   alternates: { canonical: '/contact' },
 };
 
-export default function ContactPage() {
+export default async function ContactPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ topic?: string }>;
+}) {
+  const { topic } = await searchParams;
+  const isDemo = topic === 'demo';
+
   return (
     <section className="hero-glow border-b border-border py-16 md:py-20">
       <div className="container">
         <div className="mx-auto max-w-lg text-center">
           <h1 className="text-balance font-serif text-4xl font-medium tracking-tight sm:text-5xl">
-            Get in touch
+            {isDemo ? 'Book a live demo' : 'Get in touch'}
           </h1>
           <p className="mt-4 text-pretty text-lg text-muted-foreground">
-            Question about a feature, pricing, or something not working the way it should?
-            Tell us what&apos;s going on.
+            {isDemo
+              ? "Tell us a bit about your business and when works for a 15-minute walkthrough — we'll reply within a business day to set up a time."
+              : "Question about a feature, pricing, or something not working the way it should? Tell us what's going on."}
           </p>
         </div>
 
         <div className="mx-auto mt-10 max-w-lg">
-          <ContactForm />
+          <ContactForm
+            defaultMessage={
+              isDemo
+                ? "I'd like to book a live demo of Invora. A few times that work for me: "
+                : undefined
+            }
+          />
 
           <div className="mt-6 flex flex-col items-center gap-2 text-center text-sm text-muted-foreground">
             <p className="flex items-center gap-1.5">

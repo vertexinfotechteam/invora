@@ -21,7 +21,7 @@ export const dynamic = 'force-dynamic';
  */
 export const POST = withApiErrors(async (request: NextRequest) => {
   // 1 — auth, before the rate limiter (which keys on user id) and before any
-  //     provider call. An unauthenticated POST makes zero Anthropic requests.
+  //     provider call. An unauthenticated POST makes zero AI provider requests.
   const { user, business } = await requireBusiness();
 
   const parsed = aiQuotationRequestSchema.safeParse(await request.json());

@@ -5,6 +5,11 @@
  * re-routing a feature after two weeks of real ai_usage_logs data is a
  * one-line change here.
  *
+ * These Claude model ids only take effect when ANTHROPIC_API_KEY is
+ * configured — see lib/ai/provider.ts. Every feature falls back to Gemini
+ * automatically when it isn't, so the model names below are a preference,
+ * not a hard dependency: the product works end to end on either key.
+ *
  * Rationale (2026-08-09):
  *   • Opus 5 for quotation generation and the editing command bar. This is the
  *     flagship "Generate with AI" flow and the product's differentiator; the

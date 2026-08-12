@@ -4,6 +4,7 @@ import { requireCronAuth } from '@/lib/guards/cron';
 import { withApiErrors } from '@/lib/guards/errors';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { recordDocumentEvent } from '@/lib/events';
+import { todayIso } from '@/lib/utils';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -19,7 +20,7 @@ export const GET = withApiErrors(async (request: NextRequest) => {
   requireCronAuth(request);
 
   const admin = createSupabaseAdminClient();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
 
   const { data: stale } = await admin
     .from('quotations')

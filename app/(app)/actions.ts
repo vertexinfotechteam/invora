@@ -9,6 +9,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { saveInvoice, saveQuotation } from '@/lib/documents/service';
 import { recordDocumentEvent } from '@/lib/events';
 import { ApiError } from '@/lib/guards/errors';
+import { requireDocumentQuota } from '@/lib/guards/quota';
 import { fieldErrors } from '@/lib/validation/common';
 import {
   businessBankSchema,
@@ -250,6 +251,16 @@ export async function duplicateDocumentAction(
   const table = docType === 'quotation' ? 'quotations' : 'invoices';
   const itemsTable = docType === 'quotation' ? 'quotation_items' : 'invoice_items';
   const fk = docType === 'quotation' ? 'quotation_id' : 'invoice_id';
+
+  // Duplicating mints a brand-new document just like Save does — it must be
+  // metered the same way, or the monthly document allowance is bypassed by
+  // repeatedly duplicating a single draft instead of creating new ones.
+  try {
+    await requireDocumentQuota(business.id, 1);
+  } catch (error) {
+    if (error instanceof ApiError) redirect(`/${table}/${docId}?error=quota_exceeded`);
+    throw error;
+  }
 
   const [{ data: source }, { data: items }] = await Promise.all([
     supabase.from(table).select('*').eq('id', docId).maybeSingle(),

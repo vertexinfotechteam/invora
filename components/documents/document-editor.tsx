@@ -55,7 +55,7 @@ export function DocumentEditor({
   const [dirty, setDirty] = React.useState(false);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [aiOpen, setAiOpen] = React.useState(openAiOnMount);
-  const [suggestions, setSuggestions] = React.useState<Record<number, number>>({});
+  const [suggestions, setSuggestions] = React.useState<Record<string, number>>({});
 
   const isQuote = docType === 'quotation';
 
@@ -139,19 +139,34 @@ export function DocumentEditor({
   }
 
   function setLines(lines: EditorLine[]) {
+    // Suggestions are keyed by the line's own stable `key`, not its array
+    // position, precisely so a removal or reorder cannot leave a chip
+    // pointing at the wrong row — but a *removed* line's key needs its
+    // suggestion dropped explicitly, or the chip lingers forever offering a
+    // price for a line that no longer exists.
+    const remainingKeys = new Set(lines.map((line) => line.key));
+    setSuggestions((current) => {
+      let changed = false;
+      const next: Record<string, number> = {};
+      for (const [key, paise] of Object.entries(current)) {
+        if (remainingKeys.has(key)) {
+          next[key] = paise;
+        } else {
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
     patch({ items: lines });
   }
 
   // ---- AI ----------------------------------------------------------------
 
   function applyDraft(draft: QuotationDraft, includePricing: boolean) {
-    const nextSuggestions: Record<number, number> = {};
+    const nextSuggestions: Record<string, number> = {};
 
-    const lines: EditorLine[] = draft.lineItems.map((item, index) => {
-      if (includePricing && typeof item.suggestedRatePaise === 'number') {
-        nextSuggestions[index] = item.suggestedRatePaise;
-      }
-      return {
+    const lines: EditorLine[] = draft.lineItems.map((item) => {
+      const line = {
         ...emptyLine(defaultTaxRate),
         name: item.name,
         description: item.description,
@@ -161,6 +176,10 @@ export function DocumentEditor({
         // as a chip until the user clicks "Use".
         rate_paise: 0,
       };
+      if (includePricing && typeof item.suggestedRatePaise === 'number') {
+        nextSuggestions[line.key] = item.suggestedRatePaise;
+      }
+      return line;
     });
 
     setSuggestions(nextSuggestions);
@@ -181,17 +200,16 @@ export function DocumentEditor({
     });
   }
 
-  function applySuggestedRate(index: number) {
-    const paise = suggestions[index];
+  function applySuggestedRate(key: string) {
+    const paise = suggestions[key];
     if (paise === undefined) return;
-    setLines(
-      state.items.map((line, position) =>
-        position === index ? { ...line, rate_paise: paise } : line,
-      ),
-    );
+    // No line is removed here, only patched in place, so setLines's own
+    // key-cleanup pass is a no-op — go through it anyway for the single
+    // code path that keeps `state.items` and `dirty` in sync.
+    setLines(state.items.map((line) => (line.key === key ? { ...line, rate_paise: paise } : line)));
     setSuggestions((current) => {
       const next = { ...current };
-      delete next[index];
+      delete next[key];
       return next;
     });
   }
@@ -222,6 +240,8 @@ export function DocumentEditor({
           docType={docType}
           docId={docId}
           lines={state.items}
+          docDiscountPct={state.doc_discount_pct}
+          taxMode={state.tax_mode}
           disabled={readOnly}
           onApply={({ lines, docDiscountPct }) => {
             setState((current) => ({ ...current, items: lines, doc_discount_pct: docDiscountPct }));
@@ -293,35 +313,38 @@ export function DocumentEditor({
                 These are the assistant&apos;s estimates. Nothing is applied until you click Use.
               </p>
               <ul className="mt-3 space-y-1.5">
-                {Object.entries(suggestions).map(([index, paise]) => (
-                  <li
-                    key={index}
-                    className="flex items-center justify-between gap-3 rounded-md bg-background px-3 py-2 text-sm"
-                  >
-                    <span className="min-w-0 truncate">
-                      {state.items[Number(index)]?.name || `Line ${Number(index) + 1}`}
-                    </span>
-                    <span className="flex shrink-0 items-center gap-2">
-                      <span className="font-medium tabular">{formatPaise(paise, state.currency)}</span>
-                      <Button size="sm" variant="outline" onClick={() => applySuggestedRate(Number(index))}>
-                        Use
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          setSuggestions((current) => {
-                            const next = { ...current };
-                            delete next[Number(index)];
-                            return next;
-                          })
-                        }
-                      >
-                        Ignore
-                      </Button>
-                    </span>
-                  </li>
-                ))}
+                {Object.entries(suggestions).map(([key, paise]) => {
+                  const lineIndex = state.items.findIndex((line) => line.key === key);
+                  return (
+                    <li
+                      key={key}
+                      className="flex items-center justify-between gap-3 rounded-md bg-background px-3 py-2 text-sm"
+                    >
+                      <span className="min-w-0 truncate">
+                        {state.items[lineIndex]?.name || `Line ${lineIndex + 1}`}
+                      </span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        <span className="font-medium tabular">{formatPaise(paise, state.currency)}</span>
+                        <Button size="sm" variant="outline" onClick={() => applySuggestedRate(key)}>
+                          Use
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            setSuggestions((current) => {
+                              const next = { ...current };
+                              delete next[key];
+                              return next;
+                            })
+                          }
+                        >
+                          Ignore
+                        </Button>
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ) : null}
@@ -435,7 +458,14 @@ export function DocumentEditor({
             </div>
 
             <dl className="mt-5 space-y-2 border-t border-border pt-4 text-sm">
-              <Row label="Subtotal" value={formatPaise(totals.subtotalPaise, state.currency)} />
+              <Row
+                // Inclusive mode: subtotalPaise is tax-exclusive, so it will
+                // never equal the sum of the (tax-inclusive) per-line
+                // amounts shown in the table above — labelled accordingly so
+                // it doesn't read as a math error.
+                label={state.tax_mode === 'inclusive' ? 'Taxable value' : 'Subtotal'}
+                value={formatPaise(totals.subtotalPaise, state.currency)}
+              />
               {totals.discountPaise > 0 ? (
                 <Row
                   label={`Discount (${formatPercent(state.doc_discount_pct)})`}

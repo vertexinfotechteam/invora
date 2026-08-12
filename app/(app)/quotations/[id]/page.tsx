@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Copy, Download, FileOutput, Share2, Trash2 } from 'lucide-react';
+import { Copy, FileOutput, Share2, Trash2 } from 'lucide-react';
 
 import { requireBusiness } from '@/lib/guards/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -12,11 +12,13 @@ import { SubmitButton } from '@/components/ui/submit-button';
 import { StatusBadge } from '@/components/ui/badge';
 import { DocumentEditor } from '@/components/documents/document-editor';
 import { DocumentTimeline } from '@/components/documents/timeline';
+import { DownloadMenu } from '@/components/documents/download-menu';
 import { ShareDialog } from '@/components/documents/share-dialog';
 import { SendDialog } from '@/components/documents/send-dialog';
 import { loadEditorOptions, toEditorState } from '@/lib/documents/editor-data';
 import { convertQuotationAction, deleteDraftAction, duplicateDocumentAction } from '@/app/(app)/actions';
 import { formatPaise } from '@/lib/money';
+import { buildChecks } from '@/components/app/profile-completeness';
 
 export const metadata: Metadata = { title: 'Quotation' };
 export const dynamic = 'force-dynamic';
@@ -33,6 +35,10 @@ export default async function QuotationPage({ params }: { params: Promise<{ id: 
   ]);
 
   if (!quote) notFound();
+
+  const missingLabels = buildChecks(business)
+    .filter((check) => !check.done)
+    .map((check) => check.label);
 
   const events = await listDocumentEvents('quotation', id);
   const customer = quote.customers as unknown as { name?: string; company?: string; email?: string } | null;
@@ -51,12 +57,7 @@ export default async function QuotationPage({ params }: { params: Promise<{ id: 
           <>
             <StatusBadge status={quote.status} kind="quotation" />
 
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/api/pdf/quotation/${id}?download=1`}>
-                <Download className="h-4 w-4" />
-                PDF
-              </Link>
-            </Button>
+            <DownloadMenu docType="quotation" docId={id} missingLabels={missingLabels} />
 
             <ShareDialog docType="quotation" docId={id} />
 

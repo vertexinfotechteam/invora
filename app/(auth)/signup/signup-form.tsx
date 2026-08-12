@@ -5,8 +5,9 @@ import { useActionState } from 'react';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { signUpAction, type FormState } from '../actions';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input, PasswordInput } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
+import { OAuthButtons } from '@/app/(auth)/oauth-buttons';
 
 const initialState: FormState = { ok: false };
 
@@ -31,7 +32,16 @@ export function SignupForm() {
   }
 
   return (
-    <form action={formAction} className="space-y-4" noValidate>
+    <div className="space-y-5">
+      <OAuthButtons next="/settings/profile" />
+
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs text-muted-foreground">or sign up with email</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      <form action={formAction} className="space-y-4" noValidate>
       {state.message ? (
         <div
           role="alert"
@@ -86,9 +96,8 @@ export function SignupForm() {
         error={state.errors?.password}
         required
       >
-        <Input
+        <PasswordInput
           name="password"
-          type="password"
           autoComplete="new-password"
           required
           invalid={Boolean(state.errors?.password)}
@@ -101,9 +110,8 @@ export function SignupForm() {
         error={state.errors?.confirmPassword}
         required
       >
-        <Input
+        <PasswordInput
           name="confirmPassword"
-          type="password"
           autoComplete="new-password"
           required
           invalid={Boolean(state.errors?.confirmPassword)}
@@ -138,6 +146,7 @@ export function SignupForm() {
       <Button type="submit" className="w-full" loading={pending}>
         Create account
       </Button>
-    </form>
+      </form>
+    </div>
   );
 }

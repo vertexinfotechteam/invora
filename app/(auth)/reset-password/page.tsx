@@ -3,7 +3,7 @@
 import { useActionState } from 'react';
 import { resetPasswordAction, type FormState } from '../actions';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
 
 const initialState: FormState = { ok: false };
@@ -36,9 +36,8 @@ export default function ResetPasswordPage() {
         ) : null}
 
         <Field label="New password" htmlFor="password" error={state.errors?.password} required>
-          <Input
+          <PasswordInput
             name="password"
-            type="password"
             autoComplete="new-password"
             required
             invalid={Boolean(state.errors?.password)}
@@ -51,9 +50,8 @@ export default function ResetPasswordPage() {
           error={state.errors?.confirmPassword}
           required
         >
-          <Input
+          <PasswordInput
             name="confirmPassword"
-            type="password"
             autoComplete="new-password"
             required
             invalid={Boolean(state.errors?.confirmPassword)}

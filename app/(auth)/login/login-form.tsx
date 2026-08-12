@@ -5,8 +5,9 @@ import { useActionState } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { signInAction, type FormState } from '../actions';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Input, PasswordInput } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
+import { OAuthButtons } from '@/app/(auth)/oauth-buttons';
 
 const initialState: FormState = { ok: false };
 
@@ -14,7 +15,16 @@ export function LoginForm({ next }: { next?: string }) {
   const [state, formAction, pending] = useActionState(signInAction, initialState);
 
   return (
-    <form action={formAction} className="space-y-4" noValidate>
+    <div className="space-y-5">
+      <OAuthButtons next={next} />
+
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs text-muted-foreground">or sign in with email</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      <form action={formAction} className="space-y-4" noValidate>
       <input type="hidden" name="next" value={next ?? '/dashboard'} />
 
       {state.message && !state.ok ? (
@@ -39,9 +49,8 @@ export function LoginForm({ next }: { next?: string }) {
       </Field>
 
       <Field label="Password" htmlFor="password" error={state.errors?.password} required>
-        <Input
+        <PasswordInput
           name="password"
-          type="password"
           autoComplete="current-password"
           placeholder="••••••••••"
           required
@@ -61,6 +70,7 @@ export function LoginForm({ next }: { next?: string }) {
       <Button type="submit" className="w-full" loading={pending}>
         Sign in
       </Button>
-    </form>
+      </form>
+    </div>
   );
 }

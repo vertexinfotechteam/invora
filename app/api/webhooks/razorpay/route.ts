@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { verifyWebhookSignature } from '@/lib/razorpay/verify';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
-import { planCodeForRazorpayPlan } from '@/lib/razorpay/client';
+import { getRazorpay, planCodeForRazorpayPlan } from '@/lib/razorpay/client';
 import { recordDocumentEvent } from '@/lib/events';
 import { sendEmail } from '@/lib/email/send';
 import { receiptEmail } from '@/lib/email/templates';
@@ -155,8 +155,7 @@ async function handlePaymentCaptured(event: RazorpayEvent) {
   const order = event.payload?.order?.entity;
   if (!payment?.id) return;
 
-  const notes = { ...(order?.notes ?? {}), ...(payment.notes ?? {}) };
-  const invoiceId = notes.invoice_id;
+  const invoiceId = await resolveOrderInvoiceId(payment, order);
   if (!invoiceId) return; // Subscription charges carry no invoice_id.
 
   const admin = createSupabaseAdminClient();
@@ -174,6 +173,16 @@ async function handlePaymentCaptured(event: RazorpayEvent) {
 
   const amountPaise = payment.amount ?? 0;
   if (amountPaise <= 0) return;
+
+  if (payment.currency && payment.currency !== invoice.currency) {
+    console.error('[invora:webhook] currency mismatch — refusing to credit', {
+      invoiceId,
+      invoiceCurrency: invoice.currency,
+      paymentCurrency: payment.currency,
+      paymentId: payment.id,
+    });
+    return;
+  }
 
   // razorpay_payment_id is UNIQUE, so a replayed event that slipped past the
   // ledger still cannot create a second payment row.
@@ -244,8 +253,10 @@ async function handlePaymentCaptured(event: RazorpayEvent) {
 
 async function handlePaymentFailed(event: RazorpayEvent) {
   const payment = event.payload?.payment?.entity;
-  const invoiceId = payment?.notes?.invoice_id;
-  if (!payment || !invoiceId) return;
+  const order = event.payload?.order?.entity;
+  if (!payment) return;
+  const invoiceId = await resolveOrderInvoiceId(payment, order);
+  if (!invoiceId) return;
 
   const admin = createSupabaseAdminClient();
   const { data: invoice } = await admin
@@ -339,6 +350,42 @@ async function handleSubscriptionStatus(event: RazorpayEvent, status: Subscripti
   }
 
   await admin.from('subscriptions').update(update).eq('razorpay_subscription_id', subscription.id);
+}
+
+/**
+ * Resolves which invoice a payment belongs to — from the Order's notes ONLY.
+ *
+ * `payment.notes` must never be used for this: Razorpay Checkout.js accepts a
+ * client-supplied `notes` option that gets attached to the resulting Payment
+ * entity, independent of the Order it was created against. A visitor can open
+ * the widget directly (bypassing our UI entirely) with a real order_id from
+ * their own cheap invoice but `notes: { invoice_id: <someone else's invoice> }`
+ * — if that ever got merged into attribution, their payment would credit a
+ * stranger's invoice. `order.notes` is set server-side in
+ * app/api/payments/order/route.ts and is never client-writable, so it is the
+ * only trustworthy source. When the webhook payload doesn't embed the order
+ * (Razorpay omits it on a plain `payment.captured`/`payment.failed` event),
+ * this fetches the Order from Razorpay's API by its id instead.
+ */
+async function resolveOrderInvoiceId(
+  payment: RazorpayEntity,
+  order?: RazorpayEntity,
+): Promise<string | null> {
+  if (order?.notes?.invoice_id) return order.notes.invoice_id;
+
+  if (!payment.order_id) return null;
+
+  try {
+    const fetched = await getRazorpay().orders.fetch(payment.order_id);
+    const notes = fetched.notes as Record<string, string> | undefined;
+    return notes?.invoice_id ?? null;
+  } catch (error) {
+    console.error('[invora:webhook] could not fetch order for attribution', {
+      orderId: payment.order_id,
+      error,
+    });
+    return null;
+  }
 }
 
 function mapMethod(method?: string): 'cash' | 'upi' | 'bank_transfer' | 'cheque' | 'card' | 'other' {

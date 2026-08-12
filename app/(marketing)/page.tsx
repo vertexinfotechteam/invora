@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Reveal } from '@/components/marketing/reveal';
 
 export const metadata: Metadata = { alternates: { canonical: '/' } };
 
@@ -78,37 +79,56 @@ function Hero() {
     <section className="hero-glow relative overflow-hidden border-b border-border">
       <div className="container relative py-20 md:py-28">
         <div className="mx-auto max-w-3xl text-center">
-          <Badge variant="outline" className="mb-5 gap-1.5 bg-background/70 px-3 py-1">
+          <Badge
+            variant="outline"
+            className="mb-5 animate-reveal-up gap-1.5 bg-background/70 px-3 py-1 [animation-delay:0ms]"
+          >
             <Sparkles className="h-3.5 w-3.5 text-primary" />
-            Powered by Claude · built by Vertex Infotech
+            AI-powered · built by Vertex Infotech
           </Badge>
 
-          <h1 className="text-balance font-serif text-4xl font-medium tracking-tight sm:text-5xl md:text-6xl">
+          <h1 className="animate-reveal-up text-balance font-serif text-4xl font-medium tracking-tight [animation-delay:80ms] sm:text-5xl md:text-6xl">
             From a one-line brief to a{' '}
             <span className="text-primary">paid invoice</span>
           </h1>
 
-          <p className="mx-auto mt-5 max-w-2xl text-pretty text-lg text-muted-foreground">
+          <p className="mx-auto mt-5 max-w-2xl animate-reveal-up text-pretty text-lg text-muted-foreground [animation-delay:160ms]">
             Invora writes the quotation, keeps every rupee of the arithmetic in your hands, converts
             it to a GST-ready invoice in one click, and chases the payment while you get on with
             the work.
           </p>
 
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Button asChild size="lg" className="w-full sm:w-auto">
+          <div className="mt-8 flex animate-reveal-up flex-col items-center justify-center gap-3 [animation-delay:240ms] sm:flex-row">
+            <Button asChild size="lg" className="w-full transition-transform hover:-translate-y-0.5 sm:w-auto">
               <Link href="/signup">
                 Start free — no card
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="w-full transition-transform hover:-translate-y-0.5 sm:w-auto"
+            >
               <Link href="/pricing">See pricing</Link>
             </Button>
           </div>
 
-          <p className="mt-4 text-sm text-muted-foreground">
+          <p className="mt-4 animate-reveal-up text-sm text-muted-foreground [animation-delay:300ms]">
             10 documents and 15 AI credits every month on the free plan. Upgrade only when it earns
             its keep.
+          </p>
+
+          <p className="mt-2 animate-reveal-up text-sm [animation-delay:340ms]">
+            Prefer to see it live?{' '}
+            <Link
+              href="/contact?topic=demo"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Book a 15-minute demo
+              <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
+            </Link>
           </p>
         </div>
 
@@ -127,8 +147,8 @@ function HeroPreview() {
   ];
 
   return (
-    <div className="mx-auto mt-14 max-w-4xl">
-      <div className="overflow-hidden rounded-2xl border border-border bg-background">
+    <div className="mx-auto mt-14 max-w-4xl animate-reveal-up [animation-delay:400ms]">
+      <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm transition-shadow duration-500 hover:shadow-lg">
         <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-4 py-2.5">
           <span className="h-2.5 w-2.5 rounded-full bg-destructive/40" />
           <span className="h-2.5 w-2.5 rounded-full bg-warning/50" />
@@ -205,11 +225,13 @@ function TrustBar() {
   return (
     <section className="border-b border-border bg-muted/20">
       <div className="container grid gap-4 py-8 sm:grid-cols-2 lg:grid-cols-4">
-        {items.map((item) => (
-          <div key={item.label} className="flex items-center gap-2.5 text-sm text-muted-foreground">
-            <item.icon className="h-4 w-4 shrink-0 text-primary" />
-            {item.label}
-          </div>
+        {items.map((item, index) => (
+          <Reveal key={item.label} delayMs={index * 80}>
+            <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+              <item.icon className="h-4 w-4 shrink-0 text-primary" />
+              {item.label}
+            </div>
+          </Reveal>
         ))}
       </div>
     </section>
@@ -241,29 +263,33 @@ function Pillars() {
   return (
     <section id="product" className="border-b border-border py-20">
       <div className="container">
-        <SectionHeading
-          eyebrow="The product"
-          title="Three screens that run your billing"
-          description="Not an accounting suite. The narrow slice that decides whether you get paid — done properly."
-        />
+        <Reveal>
+          <SectionHeading
+            eyebrow="The product"
+            title="Three screens that run your billing"
+            description="Not an accounting suite. The narrow slice that decides whether you get paid — done properly."
+          />
+        </Reveal>
 
         <div className="mt-12 grid gap-5 md:grid-cols-3">
-          {pillars.map((pillar) => (
-            <article key={pillar.title} className="card-surface flex flex-col gap-3 p-6">
-              <div className="w-fit rounded-lg bg-accent p-2.5">
-                <pillar.icon className="h-5 w-5 text-accent-foreground" />
-              </div>
-              <h3 className="text-lg font-semibold tracking-tight">{pillar.title}</h3>
-              <p className="text-sm text-muted-foreground">{pillar.body}</p>
-              <ul className="mt-1 space-y-1.5">
-                {pillar.points.map((point) => (
-                  <li key={point} className="flex items-start gap-2 text-sm">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-                    {point}
-                  </li>
-                ))}
-              </ul>
-            </article>
+          {pillars.map((pillar, index) => (
+            <Reveal key={pillar.title} delayMs={index * 100}>
+              <article className="card-surface group flex h-full flex-col gap-3 p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+                <div className="w-fit rounded-lg bg-accent p-2.5 transition-transform duration-300 group-hover:scale-110">
+                  <pillar.icon className="h-5 w-5 text-accent-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold tracking-tight">{pillar.title}</h3>
+                <p className="text-sm text-muted-foreground">{pillar.body}</p>
+                <ul className="mt-1 space-y-1.5">
+                  {pillar.points.map((point) => (
+                    <li key={point} className="flex items-start gap-2 text-sm">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                      {point}
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -298,34 +324,35 @@ function AiSection() {
   return (
     <section id="ai" className="border-b border-border bg-navy-900 py-20 text-white">
       <div className="container">
-        <div className="mx-auto max-w-2xl text-center">
-          <Badge variant="outline" className="mb-4 border-white/20 bg-white/5 text-white">
-            The differentiator
-          </Badge>
-          <h2 className="text-balance font-serif text-3xl font-medium tracking-tight sm:text-4xl">
-            An assistant that drafts the words and never touches the numbers
-          </h2>
-          <p className="mt-4 text-pretty text-navy-300">
-            Most AI billing tools let a language model produce a total. Invora does not. Prices,
-            tax and discounts are computed by one tested module; the model only ever suggests
-            wording — or a rate you have to click to accept.
-          </p>
-        </div>
+        <Reveal>
+          <div className="mx-auto max-w-2xl text-center">
+            <Badge variant="outline" className="mb-4 border-white/20 bg-white/5 text-white">
+              The differentiator
+            </Badge>
+            <h2 className="text-balance font-serif text-3xl font-medium tracking-tight sm:text-4xl">
+              An assistant that drafts the words and never touches the numbers
+            </h2>
+            <p className="mt-4 text-pretty text-navy-300">
+              Most AI billing tools let a language model produce a total. Invora does not. Prices,
+              tax and discounts are computed by one tested module; the model only ever suggests
+              wording — or a rate you have to click to accept.
+            </p>
+          </div>
+        </Reveal>
 
         <div className="mt-12 grid gap-5 sm:grid-cols-2">
-          {capabilities.map((capability) => (
-            <article
-              key={capability.title}
-              className="rounded-xl border border-white/10 bg-white/[0.04] p-6 backdrop-blur"
-            >
-              <capability.icon className="h-5 w-5 text-emerald-400" />
-              <h3 className="mt-3 text-base font-semibold">{capability.title}</h3>
-              <p className="mt-1.5 text-sm text-navy-300">{capability.body}</p>
-            </article>
+          {capabilities.map((capability, index) => (
+            <Reveal key={capability.title} delayMs={index * 90}>
+              <article className="rounded-xl border border-white/10 bg-white/[0.04] p-6 backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.06]">
+                <capability.icon className="h-5 w-5 animate-float text-emerald-400" />
+                <h3 className="mt-3 text-base font-semibold">{capability.title}</h3>
+                <p className="mt-1.5 text-sm text-navy-300">{capability.body}</p>
+              </article>
+            </Reveal>
           ))}
         </div>
 
-        <div className="mx-auto mt-10 max-w-3xl rounded-xl border border-white/10 bg-white/[0.03] p-5">
+        <Reveal className="mx-auto mt-10 max-w-3xl rounded-xl border border-white/10 bg-white/[0.03] p-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
             What happens when you type “give 5% discount”
           </p>
@@ -343,7 +370,7 @@ function AiSection() {
               change to the total before anything is saved.
             </li>
           </ol>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
@@ -372,21 +399,25 @@ function MoneySafety() {
   return (
     <section className="border-b border-border py-20">
       <div className="container">
-        <SectionHeading
-          eyebrow="Why you can trust the totals"
-          title="The boring engineering that matters at month end"
-          description="Billing software earns trust in the details nobody demos. Here are ours."
-        />
+        <Reveal>
+          <SectionHeading
+            eyebrow="Why you can trust the totals"
+            title="The boring engineering that matters at month end"
+            description="Billing software earns trust in the details nobody demos. Here are ours."
+          />
+        </Reveal>
 
         <div className="mt-12 grid gap-5 sm:grid-cols-2">
-          {guarantees.map((guarantee) => (
-            <div key={guarantee.title} className="card-surface p-6">
-              <h3 className="flex items-center gap-2 text-base font-semibold">
-                <Lock className="h-4 w-4 text-primary" />
-                {guarantee.title}
-              </h3>
-              <p className="mt-2 text-sm text-muted-foreground">{guarantee.body}</p>
-            </div>
+          {guarantees.map((guarantee, index) => (
+            <Reveal key={guarantee.title} delayMs={(index % 2) * 90}>
+              <div className="card-surface h-full p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+                <h3 className="flex items-center gap-2 text-base font-semibold">
+                  <Lock className="h-4 w-4 text-primary" />
+                  {guarantee.title}
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground">{guarantee.body}</p>
+              </div>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -405,18 +436,25 @@ function Workflow() {
   return (
     <section className="border-b border-border bg-muted/25 py-20">
       <div className="container">
-        <SectionHeading
-          eyebrow="How it works"
-          title="Four steps, most of them one click"
-          description="The whole loop, from brief to bank account."
-        />
+        <Reveal>
+          <SectionHeading
+            eyebrow="How it works"
+            title="Four steps, most of them one click"
+            description="The whole loop, from brief to bank account."
+          />
+        </Reveal>
 
         <ol className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {steps.map((item) => (
-            <li key={item.step} className="card-surface relative p-6">
-              <span className="text-xs font-bold tracking-widest text-primary">{item.step}</span>
-              <h3 className="mt-2 text-base font-semibold">{item.title}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">{item.body}</p>
+          {steps.map((item, index) => (
+            <li key={item.step} className="h-full">
+              <Reveal
+                delayMs={index * 90}
+                className="card-surface relative h-full p-6 hover:-translate-y-1 hover:shadow-lg"
+              >
+                <span className="text-xs font-bold tracking-widest text-primary">{item.step}</span>
+                <h3 className="mt-2 text-base font-semibold">{item.title}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{item.body}</p>
+              </Reveal>
             </li>
           ))}
         </ol>
@@ -429,14 +467,16 @@ function PricingPreview() {
   return (
     <section className="border-b border-border py-20">
       <div className="container">
-        <SectionHeading
-          eyebrow="Pricing"
-          title="Free until it pays for itself"
-          description="No credit card to start. No per-user pricing. No surprise metering."
-        />
+        <Reveal>
+          <SectionHeading
+            eyebrow="Pricing"
+            title="Free until it pays for itself"
+            description="No credit card to start. No per-user pricing. No surprise metering."
+          />
+        </Reveal>
 
         <div className="mx-auto mt-12 grid max-w-4xl gap-5 md:grid-cols-3">
-          <div className="card-surface p-6">
+          <Reveal className="card-surface h-full p-6 hover:-translate-y-1 hover:shadow-lg">
             <h3 className="text-base font-semibold">Free</h3>
             <p className="mt-1 text-sm text-muted-foreground">Your first 30 days, no card needed.</p>
             <p className="mt-4 text-3xl font-semibold tracking-tight">₹0</p>
@@ -453,9 +493,12 @@ function PricingPreview() {
             <Button asChild variant="outline" className="mt-6 w-full">
               <Link href="/signup">Start free</Link>
             </Button>
-          </div>
+          </Reveal>
 
-          <div className="card-surface relative border-primary/40 p-6">
+          <Reveal
+            delayMs={100}
+            className="card-surface relative h-full border-primary/40 p-6 hover:-translate-y-1 hover:shadow-lg"
+          >
             <Badge variant="neutral" className="absolute -top-2.5 right-5">Coming soon</Badge>
             <h3 className="text-base font-semibold">Premium — Monthly</h3>
             <p className="mt-1 text-sm text-muted-foreground">For a business that bills every week.</p>
@@ -480,9 +523,12 @@ function PricingPreview() {
             <Button asChild className="mt-6 w-full" variant="outline">
               <Link href="/pricing">See full comparison</Link>
             </Button>
-          </div>
+          </Reveal>
 
-          <div className="card-surface relative p-6">
+          <Reveal
+            delayMs={200}
+            className="card-surface relative h-full p-6 hover:-translate-y-1 hover:shadow-lg"
+          >
             <Badge variant="neutral" className="absolute -top-2.5 right-5">Coming soon</Badge>
             <h3 className="text-base font-semibold">Premium — Yearly</h3>
             <p className="mt-1 text-sm text-muted-foreground">Same Premium, billed once a year.</p>
@@ -507,7 +553,7 @@ function PricingPreview() {
             <Button asChild className="mt-6 w-full" variant="outline">
               <Link href="/pricing">See full comparison</Link>
             </Button>
-          </div>
+          </Reveal>
         </div>
       </div>
     </section>
@@ -537,7 +583,7 @@ const FAQS = [
   },
   {
     q: 'Who is behind Invora?',
-    a: 'Invora is built and operated by Vertex Infotech. Payments are processed by Razorpay and the AI features run on Anthropic’s Claude models via our servers — your documents are never sent to a model from your browser.',
+    a: 'Invora is built and operated by Vertex Infotech. Payments are processed by Razorpay. AI features run via our servers, never directly from your browser, on Anthropic’s Claude and/or Google’s Gemini models depending on the feature and provider availability.',
   },
 ];
 
@@ -545,20 +591,22 @@ function Faq() {
   return (
     <section id="faq" className="border-b border-border py-20">
       <div className="container">
-        <SectionHeading eyebrow="FAQ" title="The questions people actually ask" />
-        <div className="mx-auto mt-12 max-w-3xl divide-y divide-border">
+        <Reveal>
+          <SectionHeading eyebrow="FAQ" title="The questions people actually ask" />
+        </Reveal>
+        <Reveal delayMs={100} className="mx-auto mt-12 max-w-3xl divide-y divide-border">
           {FAQS.map((faq) => (
             <details key={faq.q} className="group py-5">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-medium">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-medium transition-colors hover:text-primary">
                 {faq.q}
-                <span className="text-muted-foreground transition-transform group-open:rotate-45">
+                <span className="text-muted-foreground transition-transform duration-300 group-open:rotate-45">
                   +
                 </span>
               </summary>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{faq.a}</p>
+              <p className="mt-3 animate-fade-up text-sm leading-relaxed text-muted-foreground">{faq.a}</p>
             </details>
           ))}
-        </div>
+        </Reveal>
       </div>
     </section>
   );
@@ -568,20 +616,25 @@ function FinalCta() {
   return (
     <section className="py-20">
       <div className="container">
-        <div className="hero-glow relative overflow-hidden rounded-2xl border border-border px-6 py-14 text-center">
+        <Reveal variant="scale" className="hero-glow relative overflow-hidden rounded-2xl border border-border px-6 py-14 text-center">
           <h2 className="text-balance font-serif text-3xl font-medium tracking-tight sm:text-4xl">
             Send your first quotation in the next five minutes
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
             Sign up, fill in your business details once, and describe a job. Invora does the rest.
           </p>
-          <Button asChild size="lg" className="mt-7">
-            <Link href="/signup">
-              Create your free account
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+            <Button asChild size="lg" className="transition-transform hover:-translate-y-0.5">
+              <Link href="/signup">
+                Create your free account
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="transition-transform hover:-translate-y-0.5">
+              <Link href="/contact?topic=demo">Or book a live demo</Link>
+            </Button>
+          </div>
+        </Reveal>
       </div>
     </section>
   );
