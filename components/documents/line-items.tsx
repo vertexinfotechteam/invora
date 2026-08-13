@@ -106,8 +106,18 @@ export function LineItemsEditor({
       </div>
 
       {/* Desktop table */}
-      <div className="hidden md:block">
-        <table className="w-full text-sm">
+      <div className="hidden md:block overflow-x-auto">
+        {/*
+          table-fixed: with auto layout, a browser sizes a column from its
+          cells' *minimum content width* — an empty/short-value Item input
+          could get sized down to almost nothing while the other, explicitly
+          `w-*`-sized columns hold their ground, which is exactly the
+          collapsed-to-a-sliver Item box this was producing. Fixed layout
+          uses only the widths declared on this header row and splits
+          whatever's left evenly across undeclared columns (just Item here),
+          so its width is deterministic and never collapses.
+        */}
+        <table className="w-full min-w-[1080px] table-fixed text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/40 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
               <th className="w-8 px-2 py-2" aria-label="Reorder handle" />
@@ -115,7 +125,7 @@ export function LineItemsEditor({
               <th className="w-20 px-2 py-2 text-right font-medium">Qty</th>
               <th className="w-28 px-2 py-2 font-medium">Unit</th>
               <th className="w-32 px-2 py-2 text-right font-medium">Rate</th>
-              <th className="w-24 px-2 py-2 text-right font-medium">Disc %</th>
+              <th className="w-28 px-2 py-2 text-right font-medium">Disc %</th>
               <th className="w-24 px-2 py-2 text-right font-medium">Tax %</th>
               <th className="w-32 px-2 py-2 text-right font-medium">Amount</th>
               <th className="w-10 px-2 py-2" aria-label="Remove" />

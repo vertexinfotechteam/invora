@@ -49,6 +49,26 @@ aistudio.google.com/apikey.
 |---|---|---|---|
 | `GEMINI_API_KEY` | ❌ | For AI features (if not using Anthropic) | Automatic fallback for every AI feature — `lib/ai/provider.ts` picks Anthropic if `ANTHROPIC_API_KEY` is set, otherwise this. Set at least one of the two, or AI routes return a clean "not configured" error. |
 
+## Google Calendar (book-a-demo)
+
+console.cloud.google.com → APIs & Services → Credentials. This is a **separate** OAuth flow from
+"Sign in with Google" (`lib/google/calendar.ts`, not Supabase Auth) — the sign-in Client ID/Secret
+live in Supabase's dashboard, these live here. The same Google Cloud project and OAuth client can
+be reused for both, but two extra steps are required beyond what sign-in needs:
+
+1. Enable the **Google Calendar API** for the project (APIs & Services → Library) — holding OAuth
+   credentials alone does not enable the API.
+2. Add `<NEXT_PUBLIC_APP_URL>/api/admin/calendar/callback` as an authorized redirect URI on the
+   OAuth client (in addition to Supabase's own callback URI used for sign-in).
+
+| Variable | Public | Required | Notes |
+|---|---|---|---|
+| `GOOGLE_CLIENT_ID` | ❌ | For /book-demo | From the Google Cloud OAuth client. |
+| `GOOGLE_CLIENT_SECRET` | ❌ | For /book-demo | From the Google Cloud OAuth client. Treat like a password. |
+
+Without these two set, an admin visiting `/admin/meetings` and clicking "Connect Google Calendar"
+gets a clean 500 rather than a broken redirect — `lib/google/calendar.ts` checks for both up front.
+
 ## Razorpay
 
 dashboard.razorpay.com → Settings → API Keys. KYC takes 2–5 working days — start it in week one.

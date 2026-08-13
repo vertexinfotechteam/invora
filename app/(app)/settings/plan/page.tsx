@@ -59,7 +59,7 @@ export default async function PlanSettingsPage() {
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {isFree
-                ? 'Free forever, with 10 documents and 15 AI credits a month.'
+                ? 'Free forever, with 10 documents and 7 AI credits a month.'
                 : `${formatPaise(plan?.price_paise ?? 0)} per ${plan?.interval ?? 'month'}.`}
             </p>
             {subscription?.current_period_end ? (

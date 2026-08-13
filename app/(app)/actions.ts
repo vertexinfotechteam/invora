@@ -345,6 +345,43 @@ export async function duplicateDocumentAction(
   redirect(`/${table}/${created.id}`);
 }
 
+/**
+ * Permanently deletes the signed-in user's account.
+ *
+ * A single admin.auth.admin.deleteUser call is the entire operation: every
+ * table that matters cascades from `auth.users` — `businesses.owner_user_id`
+ * and `app_users.user_id` both have `on delete cascade`, and every business
+ * table (quotations, invoices, customers, products, ...) cascades from
+ * `businesses.id` the same way. A hard delete (the default) also frees the
+ * email immediately, so signing up again with it afterward works exactly
+ * like a first signup — nothing about the deleted account lingers to
+ * conflict with it.
+ */
+export async function deleteAccountAction(
+  confirmText: string,
+): Promise<{ ok: boolean; message?: string }> {
+  const { user, business } = await requireBusiness();
+
+  const expected = business.name?.trim() || 'DELETE';
+  if (confirmText.trim() !== expected) {
+    return { ok: false, message: `Type "${expected}" exactly to confirm.` };
+  }
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.auth.admin.deleteUser(user.id);
+
+  if (error) {
+    console.error('[deleteAccountAction] failed', { userId: user.id, error });
+    return { ok: false, message: 'Could not delete your account. Please contact support.' };
+  }
+
+  // The user row is already gone server-side; this just clears the now-dead
+  // session cookie from the browser.
+  const supabase = await createSupabaseServerClient();
+  await supabase.auth.signOut();
+  redirect('/');
+}
+
 export async function deleteDraftAction(docType: DocumentType, docId: string): Promise<void> {
   const { business } = await requireBusiness();
   const supabase = await createSupabaseServerClient();

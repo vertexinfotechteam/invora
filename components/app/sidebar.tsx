@@ -8,8 +8,10 @@ import {
   FileText,
   LayoutDashboard,
   Package,
+  Palette,
   Receipt,
   Settings,
+  SlidersHorizontal,
   Sparkles,
   Users,
   Wallet,
@@ -27,6 +29,8 @@ const NAV = [
   { href: '/products', label: 'Catalog', icon: Package },
   { href: '/assistant', label: 'AI Assistant', icon: Sparkles },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
+  { href: '/settings/defaults', label: 'Document defaults', icon: SlidersHorizontal },
+  { href: '/settings/branding', label: 'Branding & templates', icon: Palette },
   { href: '/settings', label: 'Settings', icon: Settings },
 ] as const;
 
@@ -35,7 +39,15 @@ const MOBILE_NAV = NAV.filter((item) =>
   ['/dashboard', '/quotations', '/invoices', '/customers', '/settings'].includes(item.href),
 );
 
+// '/settings/defaults' and '/settings/branding' get their own top-level nav
+// entries below, so the generic '/settings' entry's prefix match must not
+// also light up on those two pages — otherwise two items highlight at once.
+const SETTINGS_SUB_NAV_PROMOTED = ['/settings/defaults', '/settings/branding'];
+
 function isActive(pathname: string, href: string): boolean {
+  if (href === '/settings' && SETTINGS_SUB_NAV_PROMOTED.some((path) => pathname.startsWith(path))) {
+    return false;
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

@@ -45,7 +45,7 @@ Invora is an AI-assisted quotation and invoicing tool for service businesses. Th
 GST-ready tax invoices: both parties' GSTIN, HSN/SAC per line, a tax breakup by rate, and the amount in words. This is not a GST filing service — customers still need their own accountant/filing process for returns.
 
 ## Pricing (current, exact — do not estimate or round differently)
-- **Free plan** — ₹0, no card required. 10 documents/month, 15 AI credits/month, the Classic PDF template, manual reminders, Razorpay payments, public accept/decline links. This is the only plan available for signup right now.
+- **Free plan** — ₹0, no card required. 10 documents/month, 7 AI credits/month, the Classic PDF template, manual reminders, Razorpay payments, public accept/decline links. This is the only plan available for signup right now.
 - **Premium — Monthly** — ₹299/month. **Coming soon, not purchasable yet.**
 - **Premium — Yearly** — ₹999/year. **Coming soon, not purchasable yet.**
 - Premium (once live) adds: 500 documents/month, 500 AI credits/month, three branded PDF templates, Invora branding removed, scheduled automatic reminders, CSV import/export, full reporting history, priority support.

@@ -32,15 +32,21 @@ export default async function ReportsPage({
 
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: payments }, { data: invoices }, { data: quotations }] = await Promise.all([
-    supabase
-      .from('payments')
-      .select('amount_paise, paid_at')
-      .gte('paid_at', since.toISOString())
-      .order('paid_at'),
-    supabase.from('invoices').select('status, total_paise, balance_paise, issue_date'),
-    supabase.from('quotations').select('status, total_paise, issue_date'),
-  ]);
+  const [{ data: payments }, { data: invoices }, { data: quotations }, { data: customers }] =
+    await Promise.all([
+      supabase
+        .from('payments')
+        .select('amount_paise, paid_at')
+        .gte('paid_at', since.toISOString())
+        .order('paid_at'),
+      supabase.from('invoices').select('status, total_paise, balance_paise, issue_date'),
+      supabase.from('quotations').select('status, total_paise, issue_date'),
+      supabase
+        .from('customers')
+        .select('id, name, company')
+        .is('archived_at', null)
+        .order('name'),
+    ]);
 
   const collected = (payments ?? []).reduce((sum, row) => sum + row.amount_paise, 0);
   const billed = (invoices ?? [])
@@ -118,6 +124,71 @@ export default async function ReportsPage({
         <div className="mt-4">
           <RevenueChart data={series} currency={business.currency} />
         </div>
+      </section>
+
+      <section className="card-surface mt-6 p-5">
+        <h2 className="text-sm font-semibold">Download report</h2>
+        <p className="text-xs text-muted-foreground">
+          An Excel file of quotations and invoices for a customer (or everyone) over a date range.
+        </p>
+
+        {fullReports ? (
+          <form
+            action="/api/reports/export"
+            method="get"
+            className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_auto_auto]"
+          >
+            <label className="text-xs text-muted-foreground">
+              Customer
+              <select
+                name="customer_id"
+                defaultValue=""
+                className="mt-1 h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"
+              >
+                <option value="">All customers</option>
+                {(customers ?? []).map((customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.company ? `${customer.company} — ${customer.name}` : customer.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs text-muted-foreground">
+              From
+              <input
+                type="date"
+                name="from"
+                defaultValue={since.toISOString().slice(0, 10)}
+                required
+                className="mt-1 h-9 rounded-lg border border-input bg-background px-3 text-sm"
+              />
+            </label>
+            <label className="text-xs text-muted-foreground">
+              To
+              <input
+                type="date"
+                name="to"
+                defaultValue={new Date().toISOString().slice(0, 10)}
+                required
+                className="mt-1 h-9 rounded-lg border border-input bg-background px-3 text-sm"
+              />
+            </label>
+            <button
+              type="submit"
+              className="mt-1 h-9 self-end rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 sm:mt-0"
+            >
+              Download .xlsx
+            </button>
+          </form>
+        ) : (
+          <p className="mt-4 rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+            Downloadable reports are a{' '}
+            <Link href="/settings/plan" className="font-medium text-primary underline-offset-4 hover:underline">
+              Premium
+            </Link>{' '}
+            feature.
+          </p>
+        )}
       </section>
 
       {!fullReports ? (

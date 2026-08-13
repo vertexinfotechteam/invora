@@ -235,6 +235,16 @@ export const contactSchema = z.object({
   company_website: z.string().max(200).optional(),
 });
 
+export const bookDemoSchema = z.object({
+  name: requiredText('Your name', 100),
+  email: emailSchema,
+  company: optionalText(160),
+  notes: optionalText(2000),
+  startIso: z.string().datetime({ message: 'Choose a time slot.' }),
+  // Honeypot, same convention as contactSchema.
+  company_website: z.string().max(200).optional(),
+});
+
 // ---------------------------------------------------------------------------
 // Email
 // ---------------------------------------------------------------------------

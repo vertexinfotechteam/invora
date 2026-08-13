@@ -65,3 +65,12 @@ export const AI_FEATURE_SLUG: Record<AiFeature, string> = {
   TEXT_REWRITE: 'text_rewrite',
   REMINDER_DRAFT: 'reminder_draft',
 };
+
+/**
+ * The only feature that spends an AI credit. Generating a quotation is the
+ * flagship, expensive (Opus, high-effort) call — editing one afterward
+ * (the command bar, rewrite, invoice-assist wording, reminder drafts) is
+ * meant to feel free so nobody hesitates to polish a draft before sending
+ * it. `runStructuredAi` checks this before reserving or charging anything.
+ */
+export const CREDIT_METERED_FEATURES: ReadonlySet<AiFeature> = new Set(['QUOTATION_GENERATE']);

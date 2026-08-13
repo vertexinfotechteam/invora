@@ -316,3 +316,137 @@ export function contactFormEmail(input: { name: string; email: string; message: 
     text,
   };
 }
+
+/**
+ * Sent immediately after booking a demo call — deliberately WITHOUT the Meet
+ * link. `demoReminderEmail` below carries the link and goes out ~2 hours
+ * before the meeting instead (app/api/cron/demo-reminders/route.ts); this
+ * one just confirms the time. Not tenant-branded, same reasoning as
+ * contactFormEmail — this is Vertex Infotech's own calendar, not any
+ * customer's.
+ */
+export function demoBookingEmail(input: { name: string; whenFormatted: string }) {
+  const { name, whenFormatted } = input;
+
+  const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Your Invora demo is booked</title></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 12px;">
+<tr><td align="center">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+         style="max-width:560px;background:#ffffff;border-radius:14px;overflow:hidden;
+                box-shadow:0 1px 3px rgba(15,23,42,.08);">
+    <tr><td style="height:4px;background:#4F46E5;"></td></tr>
+    <tr><td style="padding:28px 32px 4px 32px;">
+      <p style="margin:0;font-size:13px;color:#64748b;font-weight:600;letter-spacing:.4px;">INVORA · DEMO BOOKED</p>
+    </td></tr>
+    <tr><td style="padding:12px 32px 8px 32px;color:#0f172a;font-size:15px;line-height:1.6;">
+      <p style="margin:0 0 12px 0;">Hi ${escapeHtml(name)},</p>
+      <p style="margin:0 0 16px 0;">You're booked for a 30-minute walkthrough of Invora on <strong>${escapeHtml(whenFormatted)}</strong>, on Google Meet.</p>
+      <p style="margin:0 0 16px 0;color:#64748b;">We'll email the Google Meet link about 2 hours before the meeting starts — no need to hunt for it now. A calendar invite from Google is on its way separately.</p>
+      <p style="margin:0;color:#64748b;font-size:13px;">Need to reschedule? Just reply to this email.</p>
+    </td></tr>
+  </table>
+</td></tr></table>
+</body></html>`;
+
+  const text = `Your Invora demo is booked\n\nHi ${name},\n\nYou're booked for a 30-minute walkthrough of Invora on ${whenFormatted}, on Google Meet.\n\nWe'll email the Google Meet link about 2 hours before the meeting starts — no need to hunt for it now. A calendar invite from Google is on its way separately.\n\nNeed to reschedule? Just reply to this email.`;
+
+  return {
+    subject: `Your Invora demo — ${whenFormatted}`,
+    html,
+    text,
+  };
+}
+
+/** Sent ~2 hours before the meeting, by app/api/cron/demo-reminders — this
+ * is the one that actually carries the Meet link. */
+export function demoReminderEmail(input: { name: string; whenFormatted: string; meetLink: string }) {
+  const { name, whenFormatted, meetLink } = input;
+
+  const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Your Invora demo starts soon</title></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 12px;">
+<tr><td align="center">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+         style="max-width:560px;background:#ffffff;border-radius:14px;overflow:hidden;
+                box-shadow:0 1px 3px rgba(15,23,42,.08);">
+    <tr><td style="height:4px;background:#4F46E5;"></td></tr>
+    <tr><td style="padding:28px 32px 4px 32px;">
+      <p style="margin:0;font-size:13px;color:#64748b;font-weight:600;letter-spacing:.4px;">INVORA · STARTING SOON</p>
+    </td></tr>
+    <tr><td style="padding:12px 32px 28px 32px;color:#0f172a;font-size:15px;line-height:1.6;">
+      <p style="margin:0 0 12px 0;">Hi ${escapeHtml(name)},</p>
+      <p style="margin:0 0 20px 0;">Your Invora demo is coming up: <strong>${escapeHtml(whenFormatted)}</strong>.</p>
+      <p style="margin:0;">
+        <a href="${escapeHtml(meetLink)}" style="display:inline-block;background:#4F46E5;color:#ffffff;
+           text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;font-size:15px;">
+          Join on Google Meet
+        </a>
+      </p>
+    </td></tr>
+  </table>
+</td></tr></table>
+</body></html>`;
+
+  const text = `Your Invora demo starts soon\n\nHi ${name},\n\nYour Invora demo is coming up: ${whenFormatted}.\n\nJoin on Google Meet: ${meetLink}`;
+
+  return {
+    subject: `Starting soon — your Invora demo at ${whenFormatted}`,
+    html,
+    text,
+  };
+}
+
+/** Sent to Vertex Infotech (CONTACT_EMAIL) the moment someone books a demo —
+ * the only way the team otherwise learns of a new booking is checking the
+ * connected Google Calendar or /admin/meetings by hand. */
+export function demoBookingAdminNotificationEmail(input: {
+  visitorName: string;
+  visitorEmail: string;
+  company: string | null;
+  notes: string | null;
+  whenFormatted: string;
+}) {
+  const { visitorName, visitorEmail, company, notes, whenFormatted } = input;
+
+  const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>New demo booked</title></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 12px;">
+<tr><td align="center">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+         style="max-width:560px;background:#ffffff;border-radius:14px;overflow:hidden;
+                box-shadow:0 1px 3px rgba(15,23,42,.08);">
+    <tr><td style="height:4px;background:#4F46E5;"></td></tr>
+    <tr><td style="padding:28px 32px 4px 32px;">
+      <p style="margin:0;font-size:13px;color:#64748b;font-weight:600;letter-spacing:.4px;">NEW DEMO BOOKED</p>
+    </td></tr>
+    <tr><td style="padding:12px 32px 8px 32px;color:#0f172a;font-size:15px;line-height:1.6;">
+      <p style="margin:0 0 4px 0;"><strong>When:</strong> ${escapeHtml(whenFormatted)}</p>
+      <p style="margin:0 0 4px 0;"><strong>Name:</strong> ${escapeHtml(visitorName)}</p>
+      <p style="margin:0 0 4px 0;">
+        <strong>Email:</strong> <a href="mailto:${escapeHtml(visitorEmail)}" style="color:#4F46E5;">${escapeHtml(visitorEmail)}</a>
+      </p>
+      ${company ? `<p style="margin:0 0 4px 0;"><strong>Business:</strong> ${escapeHtml(company)}</p>` : ''}
+      ${notes ? `<p style="margin:16px 0 6px 0;color:#64748b;font-size:13px;font-weight:600;">Notes</p><p style="margin:0;white-space:pre-line;">${escapeHtml(notes)}</p>` : ''}
+    </td></tr>
+    <tr><td style="padding:16px 32px 26px 32px;color:#94a3b8;font-size:12px;line-height:1.5;">
+      Already on your connected Google Calendar. Manage bookings at /admin/meetings.
+    </td></tr>
+  </table>
+</td></tr></table>
+</body></html>`;
+
+  const text = `New demo booked\n\nWhen: ${whenFormatted}\nName: ${visitorName}\nEmail: ${visitorEmail}\n${company ? `Business: ${company}\n` : ''}${notes ? `\nNotes:\n${notes}\n` : ''}\nAlready on your connected Google Calendar. Manage bookings at /admin/meetings.`;
+
+  return {
+    subject: `New demo booked — ${visitorName}, ${whenFormatted}`,
+    html,
+    text,
+  };
+}

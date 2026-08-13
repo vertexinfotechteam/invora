@@ -11,7 +11,7 @@ values
     'free',
     'Starter',
     'Everything you need to send your first professional quotations and invoices.',
-    0, 'month', 10, 15, 0,
+    0, 'month', 10, 7, 0,
     jsonb_build_object(
       'premium_templates', false,
       'remove_branding',   false,

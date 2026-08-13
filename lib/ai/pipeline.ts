@@ -14,6 +14,7 @@ import {
   AI_MAX_INPUT_TOKENS,
   AI_MAX_TOKENS,
   AI_MODELS,
+  CREDIT_METERED_FEATURES,
   type AiFeature,
 } from '@/lib/ai/models';
 import { releaseAiCredit, requireCredits } from '@/lib/guards/quota';
@@ -49,12 +50,15 @@ const CHARS_PER_TOKEN_ESTIMATE = 3;
  * THE pipeline. Every /api/ai/* route goes through here, in this order:
  *
  *   1. rate limit          → 429
- *   2. reserve a credit    → 402 with an upgrade CTA
+ *   2. reserve a credit    → 402 with an upgrade CTA (metered features only —
+ *                            see CREDIT_METERED_FEATURES; editing an existing
+ *                            draft is free, only generating one spends a credit)
  *   3. size guard          → 413 before we pay for an absurd request
  *   4. call the provider   → whichever of ANTHROPIC_API_KEY / GEMINI_API_KEY
  *                            is configured (see lib/ai/provider.ts)
  *   5. log usage           → always, success or failure
- *   6. release the credit  → only when the call did not succeed
+ *   6. release the credit  → only when the call did not succeed, and only if
+ *                            one was reserved in step 2
  *
  * Claude gets native structured output (zodOutputFormat) plus prompt caching.
  * Gemini has neither, so its branch asks for JSON mode and includes the
@@ -74,12 +78,18 @@ export async function runStructuredAi<TSchema extends z.ZodTypeAny>(
 ): Promise<StructuredAiResult<z.infer<TSchema>>> {
   const featureSlug = AI_FEATURE_SLUG[request.feature];
   const provider = resolveAiProvider();
+  const metered = CREDIT_METERED_FEATURES.has(request.feature);
 
   // 1 — rate limit
   await enforceRateLimit('ai', caller.userId);
 
-  // 2 — reserve a credit (atomic; two tabs cannot both slip past)
-  await requireCredits(caller.businessId, 1);
+  // 2 — reserve a credit (atomic; two tabs cannot both slip past) — skipped
+  // entirely for unmetered features, so there is nothing to release on
+  // failure either (releasing a credit that was never reserved would just
+  // refund someone else's unrelated usage).
+  if (metered) {
+    await requireCredits(caller.businessId, 1);
+  }
 
   const startedAt = Date.now();
 
@@ -93,7 +103,7 @@ export async function runStructuredAi<TSchema extends z.ZodTypeAny>(
       meta?: Record<string, string | number | boolean>;
     } = {},
   ) => {
-    await releaseAiCredit(caller.businessId, 1);
+    if (metered) await releaseAiCredit(caller.businessId, 1);
     await logAiUsage({
       businessId: caller.businessId,
       userId: caller.userId,
@@ -111,8 +121,8 @@ export async function runStructuredAi<TSchema extends z.ZodTypeAny>(
 
   try {
     return provider === 'anthropic'
-      ? await runAnthropic(caller, request, featureSlug, startedAt, fail)
-      : await runGemini(caller, request, featureSlug, startedAt, fail);
+      ? await runAnthropic(caller, request, featureSlug, startedAt, fail, metered)
+      : await runGemini(caller, request, featureSlug, startedAt, fail, metered);
   } catch (error) {
     if (error instanceof ApiError) throw error;
 
@@ -143,6 +153,7 @@ async function runAnthropic<TSchema extends z.ZodTypeAny>(
   featureSlug: string,
   startedAt: number,
   fail: FailFn,
+  metered: boolean,
 ): Promise<StructuredAiResult<z.infer<TSchema>>> {
   const model = AI_MODELS[request.feature];
   const maxTokens = AI_MAX_TOKENS[request.feature];
@@ -235,7 +246,7 @@ async function runAnthropic<TSchema extends z.ZodTypeAny>(
     latencyMs,
     status: 'ok',
     stopReason: response.stop_reason ?? null,
-    creditCharged: true,
+    creditCharged: metered,
     meta: { ...request.meta, provider: 'anthropic' } as never,
   });
 
@@ -253,6 +264,7 @@ async function runGemini<TSchema extends z.ZodTypeAny>(
   featureSlug: string,
   startedAt: number,
   fail: FailFn,
+  metered: boolean,
 ): Promise<StructuredAiResult<z.infer<TSchema>>> {
   const maxTokens = AI_MAX_TOKENS[request.feature];
 
@@ -325,7 +337,7 @@ async function runGemini<TSchema extends z.ZodTypeAny>(
     latencyMs,
     status: 'ok',
     stopReason: response.finishReason,
-    creditCharged: true,
+    creditCharged: metered,
     meta: { ...request.meta, provider: 'gemini' } as never,
   });
 

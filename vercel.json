@@ -18,6 +18,10 @@
     {
       "path": "/api/cron/usage-reset",
       "schedule": "5 * * * *"
+    },
+    {
+      "path": "/api/cron/demo-reminders",
+      "schedule": "*/15 * * * *"
     }
   ],
   "functions": {

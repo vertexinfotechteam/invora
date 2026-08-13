@@ -17,6 +17,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Reveal } from '@/components/marketing/reveal';
+import { TypingText } from '@/components/marketing/typing-text';
+import { initials } from '@/lib/utils';
 
 export const metadata: Metadata = { alternates: { canonical: '/' } };
 
@@ -67,6 +69,7 @@ export default function LandingPage() {
       <AiSection />
       <MoneySafety />
       <Workflow />
+      <Team />
       <PricingPreview />
       <Faq />
       <FinalCta />
@@ -89,7 +92,10 @@ function Hero() {
 
           <h1 className="animate-reveal-up text-balance font-serif text-4xl font-medium tracking-tight [animation-delay:80ms] sm:text-5xl md:text-6xl">
             From a one-line brief to a{' '}
-            <span className="text-primary">paid invoice</span>
+            <TypingText
+              phrases={['paid invoice', 'signed quotation', 'happy client', '5-minute quote']}
+              className="text-primary"
+            />
           </h1>
 
           <p className="mx-auto mt-5 max-w-2xl animate-reveal-up text-pretty text-lg text-muted-foreground [animation-delay:160ms]">
@@ -113,22 +119,22 @@ function Hero() {
             >
               <Link href="/pricing">See pricing</Link>
             </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="ghost"
+              className="w-full transition-transform hover:-translate-y-0.5 sm:w-auto"
+            >
+              <Link href="/book-demo">
+                Book a demo
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
           </div>
 
           <p className="mt-4 animate-reveal-up text-sm text-muted-foreground [animation-delay:300ms]">
-            10 documents and 15 AI credits every month on the free plan. Upgrade only when it earns
+            10 documents and 7 AI credits every month on the free plan. Upgrade only when it earns
             its keep.
-          </p>
-
-          <p className="mt-2 animate-reveal-up text-sm [animation-delay:340ms]">
-            Prefer to see it live?{' '}
-            <Link
-              href="/contact?topic=demo"
-              className="font-medium text-primary underline-offset-4 hover:underline"
-            >
-              Book a 15-minute demo
-              <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
-            </Link>
           </p>
         </div>
 
@@ -463,6 +469,46 @@ function Workflow() {
   );
 }
 
+const TEAM = [
+  { name: 'Tarang Vasoya', role: 'Project Lead & CEO' },
+  { name: 'Het Aghera', role: 'AI & Backend' },
+  { name: 'Om Bardoliya', role: 'Frontend & UI/UX' },
+  { name: 'Dharm Senjaliya', role: 'Product & Database' },
+  { name: 'Navneet Radadiya', role: 'QA & Product' },
+];
+
+function Team() {
+  return (
+    <section className="border-b border-border py-20">
+      <div className="container">
+        <Reveal>
+          <SectionHeading
+            eyebrow="The team"
+            title="Who's behind Invora"
+            description="A small team at Vertex Infotech, building the billing tool we wanted to use ourselves."
+          />
+        </Reveal>
+
+        <div className="mx-auto mt-12 grid max-w-4xl gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {TEAM.map((member, index) => (
+            <Reveal key={member.name} delayMs={(index % 3) * 90}>
+              <div className="card-surface flex items-center gap-3 p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-semibold text-accent-foreground">
+                  {initials(member.name)}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{member.name}</p>
+                  <p className="truncate text-sm text-muted-foreground">{member.role}</p>
+                </div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function PricingPreview() {
   return (
     <section className="border-b border-border py-20">
@@ -481,7 +527,7 @@ function PricingPreview() {
             <p className="mt-1 text-sm text-muted-foreground">Your first 30 days, no card needed.</p>
             <p className="mt-4 text-3xl font-semibold tracking-tight">₹0</p>
             <ul className="mt-5 space-y-2 text-sm">
-              {['10 documents a month', '15 AI credits a month', 'Classic PDF template', 'Manual reminders'].map(
+              {['10 documents a month', '7 AI credits a month', 'Classic PDF template', 'Manual reminders'].map(
                 (item) => (
                   <li key={item} className="flex gap-2">
                     <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
@@ -631,7 +677,7 @@ function FinalCta() {
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="transition-transform hover:-translate-y-0.5">
-              <Link href="/contact?topic=demo">Or book a live demo</Link>
+              <Link href="/book-demo">Or book a live demo</Link>
             </Button>
           </div>
         </Reveal>

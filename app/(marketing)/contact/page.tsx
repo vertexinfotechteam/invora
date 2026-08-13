@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { Mail, MessageSquare } from 'lucide-react';
+import Link from 'next/link';
+import { CalendarDays, Mail, MessageSquare } from 'lucide-react';
 import { ContactForm } from './contact-form';
 
 export const metadata: Metadata = {
@@ -25,9 +26,18 @@ export default async function ContactPage({
           </h1>
           <p className="mt-4 text-pretty text-lg text-muted-foreground">
             {isDemo
-              ? "Tell us a bit about your business and when works for a 15-minute walkthrough — we'll reply within a business day to set up a time."
+              ? "Prefer a fixed time right now? Book a 30-minute slot directly — or tell us a bit about your business here and we'll reply within a business day to find a time."
               : "Question about a feature, pricing, or something not working the way it should? Tell us what's going on."}
           </p>
+          {isDemo ? (
+            <Link
+              href="/book-demo"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-primary/40 bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:bg-accent/80"
+            >
+              <CalendarDays className="h-4 w-4" />
+              See live availability instead
+            </Link>
+          ) : null}
         </div>
 
         <div className="mx-auto mt-10 max-w-lg">

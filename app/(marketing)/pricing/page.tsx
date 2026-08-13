@@ -60,7 +60,7 @@ export default function PricingPage() {
               cta={{ label: 'Start free', href: '/signup', variant: 'outline' as const }}
               highlights={[
                 '10 documents a month',
-                '15 AI credits a month',
+                '7 AI credits a month',
                 'Classic PDF template',
                 'Online payments via Razorpay',
                 'Public accept & decline links',
