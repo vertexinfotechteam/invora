@@ -5,6 +5,7 @@ import { headers } from 'next/headers';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { enforceRateLimit, limiters } from '@/lib/guards/rate-limit';
 import { fieldErrors, safeRedirectPath } from '@/lib/validation/common';
+import { checkEmailDeliverable } from '@/lib/validation/email-address';
 import {
   forgotPasswordSchema,
   resetPasswordSchema,
@@ -64,6 +65,14 @@ export async function signUpAction(_prev: FormState, formData: FormData): Promis
     await limitByIp('signup');
   } catch {
     return { ok: false, message: 'Too many attempts. Please wait a minute and try again.' };
+  }
+
+  // Checked before the account exists, not after — an address that cannot
+  // receive mail can never confirm, reset a password, or be reached about an
+  // invoice, so there is nothing worth creating a row for.
+  const deliverable = await checkEmailDeliverable(parsed.data.email);
+  if (!deliverable.ok) {
+    return { ok: false, errors: { email: deliverable.reason } };
   }
 
   const supabase = await createSupabaseServerClient();

@@ -5,6 +5,7 @@ import { badRequest, notFound, withApiErrors } from '@/lib/guards/errors';
 import { enforceRateLimit } from '@/lib/guards/rate-limit';
 import { sendDocumentSchema } from '@/lib/validation/schemas';
 import { fieldErrors } from '@/lib/validation/common';
+import { checkEmailsDeliverable } from '@/lib/validation/email-address';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { renderDocumentPdf } from '@/lib/pdf/render';
@@ -32,6 +33,20 @@ export const POST = withApiErrors(async (request: NextRequest) => {
   const parsed = sendDocumentSchema.safeParse(await request.json());
   if (!parsed.success) throw badRequest('Check the message.', fieldErrors(parsed.error));
   const input = parsed.data;
+
+  // Checked before the document is marked `sent` and its old share link is
+  // revoked — an undeliverable recipient should leave the document exactly as
+  // it was, not in a state that claims it reached someone.
+  const undeliverable = await checkEmailsDeliverable([input.to, ...(input.cc ?? [])]);
+  if (undeliverable.size > 0) {
+    const toReason = undeliverable.get(input.to);
+    throw badRequest(
+      'Check the message.',
+      toReason
+        ? { to: toReason }
+        : { cc: [...undeliverable.values()][0] },
+    );
+  }
 
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();

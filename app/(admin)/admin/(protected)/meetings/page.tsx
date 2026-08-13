@@ -111,6 +111,11 @@ export default async function AdminMeetingsPage({
 
       <section className="card-surface p-5">
         <h2 className="text-sm font-semibold">Weekly availability (IST)</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Not currently applied — /book-demo offers every 30-minute slot, around the clock, minus
+          anything already booked or busy on the connected calendar. These windows are kept for
+          when hours are reintroduced.
+        </p>
         <div className="mt-4 space-y-4">
           {WEEKDAYS.map((label, weekday) => (
             <div key={weekday} className="flex flex-wrap items-start gap-3 border-b border-border pb-4 last:border-0 last:pb-0">

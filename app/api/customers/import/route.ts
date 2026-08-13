@@ -6,6 +6,7 @@ import { enforceRateLimit } from '@/lib/guards/rate-limit';
 import { badRequest, withApiErrors } from '@/lib/guards/errors';
 import { assertFeature } from '@/lib/guards/features';
 import { customerSchema } from '@/lib/validation/schemas';
+import { checkEmailsDeliverable } from '@/lib/validation/email-address';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
@@ -42,6 +43,7 @@ export const POST = withApiErrors(async (request: NextRequest) => {
   const { rows, mapping, dryRun } = parsed.data;
 
   const valid: z.infer<typeof customerSchema>[] = [];
+  const validRowNumbers: number[] = [];
   const errors: ImportRowError[] = [];
 
   rows.forEach((raw, index) => {
@@ -55,6 +57,8 @@ export const POST = withApiErrors(async (request: NextRequest) => {
     const result = customerSchema.safeParse(candidate);
     if (result.success) {
       valid.push(result.data);
+      // +2 for the same reason as the error branch below.
+      validRowNumbers.push(index + 2);
     } else {
       // +2: one for the header row, one because spreadsheets are 1-indexed.
       const rowNumber = index + 2;
@@ -69,6 +73,27 @@ export const POST = withApiErrors(async (request: NextRequest) => {
       }
     }
   });
+
+  // Address domains are checked once per distinct domain for the whole file,
+  // and a bad one only costs its own row — importing 400 customers should not
+  // fail because one of them has a typo'd address.
+  const undeliverable = await checkEmailsDeliverable(
+    valid.map((customer) => customer.email).filter((email): email is string => Boolean(email)),
+  );
+
+  if (undeliverable.size > 0) {
+    for (let i = valid.length - 1; i >= 0; i -= 1) {
+      const email = valid[i]?.email;
+      const rowNumber = validRowNumbers[i];
+      const reason = email ? undeliverable.get(email) : undefined;
+      if (!email || !reason || rowNumber === undefined) continue;
+
+      errors.push({ row: rowNumber, field: 'email', message: reason, value: email });
+      valid.splice(i, 1);
+      validRowNumbers.splice(i, 1);
+    }
+    errors.sort((a, b) => a.row - b.row);
+  }
 
   if (dryRun) {
     return NextResponse.json({

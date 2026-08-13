@@ -1,5 +1,6 @@
 {
   "version": "0.0.1",
+  "autoPort": true,
   "configurations": [
     {
       "name": "dev",
@@ -8,7 +9,7 @@
         "run",
         "dev"
       ],
-      "port": 3000
+      "port": 3100
     }
   ]
 }

@@ -52,31 +52,35 @@ export function SignupForm() {
         </div>
       ) : null}
 
-      <Field label="Your name" htmlFor="fullName" error={state.errors?.fullName} required>
-        <Input
-          name="fullName"
-          autoComplete="name"
-          placeholder="Priya Sharma"
-          required
-          invalid={Boolean(state.errors?.fullName)}
-        />
-      </Field>
+      {/* Paired so the whole form clears the fold on a 1366x768 laptop —
+          five stacked fields plus the OAuth block did not. */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Your name" htmlFor="fullName" error={state.errors?.fullName} required>
+          <Input
+            name="fullName"
+            autoComplete="name"
+            placeholder="Priya Sharma"
+            required
+            invalid={Boolean(state.errors?.fullName)}
+          />
+        </Field>
 
-      <Field
-        label="Business name"
-        htmlFor="businessName"
-        hint="Appears on your quotations and invoices. You can change it later."
-        error={state.errors?.businessName}
-        required
-      >
-        <Input
-          name="businessName"
-          autoComplete="organization"
-          placeholder="Sharma Design Studio"
+        <Field
+          label="Business name"
+          htmlFor="businessName"
+          hint="Shown on your quotations and invoices."
+          error={state.errors?.businessName}
           required
-          invalid={Boolean(state.errors?.businessName)}
-        />
-      </Field>
+        >
+          <Input
+            name="businessName"
+            autoComplete="organization"
+            placeholder="Sharma Design Studio"
+            required
+            invalid={Boolean(state.errors?.businessName)}
+          />
+        </Field>
+      </div>
 
       <Field label="Work email" htmlFor="email" error={state.errors?.email} required>
         <Input
@@ -89,34 +93,42 @@ export function SignupForm() {
         />
       </Field>
 
-      <Field
-        label="Password"
-        htmlFor="password"
-        hint="At least 10 characters, with upper case, lower case and a number."
-        error={state.errors?.password}
-        required
-      >
-        <PasswordInput
-          name="password"
-          autoComplete="new-password"
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field
+          label="Password"
+          htmlFor="password"
+          error={state.errors?.password}
           required
-          invalid={Boolean(state.errors?.password)}
-        />
-      </Field>
+        >
+          <PasswordInput
+            name="password"
+            autoComplete="new-password"
+            required
+            invalid={Boolean(state.errors?.password)}
+          />
+        </Field>
 
-      <Field
-        label="Confirm password"
-        htmlFor="confirmPassword"
-        error={state.errors?.confirmPassword}
-        required
-      >
-        <PasswordInput
-          name="confirmPassword"
-          autoComplete="new-password"
+        <Field
+          label="Confirm password"
+          htmlFor="confirmPassword"
+          error={state.errors?.confirmPassword}
           required
-          invalid={Boolean(state.errors?.confirmPassword)}
-        />
-      </Field>
+        >
+          <PasswordInput
+            name="confirmPassword"
+            autoComplete="new-password"
+            required
+            invalid={Boolean(state.errors?.confirmPassword)}
+          />
+        </Field>
+      </div>
+
+      {/* The rule moved out of the field's hint slot: side by side, a
+          three-line hint under one input and none under the other left the
+          pair visibly lopsided. */}
+      <p className="-mt-1 text-xs text-muted-foreground">
+        At least 10 characters, with upper case, lower case and a number.
+      </p>
 
       <label className="flex items-start gap-2.5 text-sm">
         <input

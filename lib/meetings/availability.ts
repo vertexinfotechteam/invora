@@ -1,33 +1,32 @@
 import 'server-only';
 
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
-import { getBusyIntervals, isCalendarConnected } from '@/lib/google/calendar';
+import { getBusyIntervals } from '@/lib/google/calendar';
 
 /**
  * Computes open 30-minute demo-call slots for a given IST calendar date.
  *
- * A slot is open when it (a) falls inside a configured weekly availability
- * window, (b) doesn't overlap an existing confirmed demo_bookings row, (c)
- * doesn't overlap a busy block on the connected Google Calendar (catching
- * events booked directly in Google, outside Invora entirely), and (d) is at
- * least MIN_NOTICE_MINUTES from now — nobody should be able to book a slot
- * that starts in the next five minutes.
+ * The day is open around the clock. A slot is offered unless it (a) overlaps
+ * an existing confirmed demo_bookings row, (b) overlaps a busy block on the
+ * connected Google Calendar (catching events booked directly in Google,
+ * outside Invora entirely), or (c) starts less than MIN_NOTICE_MINUTES from
+ * now — the confirmation promises the Meet link two hours ahead of the call,
+ * so a slot that starts sooner than that cannot keep the promise.
+ *
+ * Neither a connected calendar nor a configured weekly window is required to
+ * *offer* a slot. Both were previously hard prerequisites, which meant every
+ * date in the picker read "No open slots that day" whenever the calendar was
+ * disconnected. A booking that lands without a calendar still reaches the team
+ * by email, which is what the admin notification is for.
  */
 
 const SLOT_MINUTES = 30;
 const MIN_NOTICE_MINUTES = 120;
+const MINUTES_IN_DAY = 1440;
 
 export interface Slot {
   startIso: string;
   endIso: string;
-}
-
-/** Day-of-week for a plain "YYYY-MM-DD" calendar date — deliberately anchored
- * at noon UTC so the ±5:30 IST offset can never push it across a day
- * boundary; a calendar date's weekday isn't timezone-dependent in the first
- * place, this just keeps the arithmetic safe. */
-function weekdayOf(dateIso: string): number {
-  return new Date(`${dateIso}T12:00:00Z`).getUTCDay();
 }
 
 /** Converts "this many minutes into `dateIso`, read as an IST calendar day" to a UTC instant. */
@@ -38,20 +37,7 @@ function istMinuteToUtc(dateIso: string, minute: number): number {
 export async function computeAvailableSlots(dateIso: string): Promise<Slot[]> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateIso)) return [];
 
-  // No connected calendar means no slot could actually be booked — showing
-  // "open" slots that would 409 on submit is worse than showing none.
-  const { connected } = await isCalendarConnected();
-  if (!connected) return [];
-
   const admin = createSupabaseAdminClient();
-  const weekday = weekdayOf(dateIso);
-
-  const { data: windows } = await admin
-    .from('demo_availability_windows')
-    .select('start_minute, end_minute')
-    .eq('weekday', weekday);
-
-  if (!windows || windows.length === 0) return [];
 
   const dayStartMs = istMinuteToUtc(dateIso, 0);
   const dayEndMs = istMinuteToUtc(dateIso, 1440);
@@ -76,14 +62,12 @@ export async function computeAvailableSlots(dateIso: string): Promise<Slot[]> {
   const earliestStartMs = Date.now() + MIN_NOTICE_MINUTES * 60_000;
   const slots: Slot[] = [];
 
-  for (const window of windows) {
-    for (let minute = window.start_minute; minute + SLOT_MINUTES <= window.end_minute; minute += SLOT_MINUTES) {
-      const startMs = istMinuteToUtc(dateIso, minute);
-      const endMs = startMs + SLOT_MINUTES * 60_000;
-      if (startMs < earliestStartMs) continue;
-      if (blocked.some((busySlot) => startMs < busySlot.end && endMs > busySlot.start)) continue;
-      slots.push({ startIso: new Date(startMs).toISOString(), endIso: new Date(endMs).toISOString() });
-    }
+  for (let minute = 0; minute + SLOT_MINUTES <= MINUTES_IN_DAY; minute += SLOT_MINUTES) {
+    const startMs = istMinuteToUtc(dateIso, minute);
+    const endMs = startMs + SLOT_MINUTES * 60_000;
+    if (startMs < earliestStartMs) continue;
+    if (blocked.some((busySlot) => startMs < busySlot.end && endMs > busySlot.start)) continue;
+    slots.push({ startIso: new Date(startMs).toISOString(), endIso: new Date(endMs).toISOString() });
   }
 
   return slots;

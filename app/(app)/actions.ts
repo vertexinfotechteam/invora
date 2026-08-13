@@ -11,6 +11,7 @@ import { recordDocumentEvent } from '@/lib/events';
 import { ApiError } from '@/lib/guards/errors';
 import { requireDocumentQuota } from '@/lib/guards/quota';
 import { fieldErrors } from '@/lib/validation/common';
+import { checkEmailDeliverable } from '@/lib/validation/email-address';
 import {
   businessBankSchema,
   businessBrandingSchema,
@@ -57,6 +58,15 @@ export async function saveCustomerAction(
   const parsed = customerSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     return { ok: false, message: 'Please fix the highlighted fields.', errors: fieldErrors(parsed.error) };
+  }
+
+  // A customer's address is optional, but if one is given it is what every
+  // quotation and invoice for them will be sent to.
+  if (parsed.data.email) {
+    const deliverable = await checkEmailDeliverable(parsed.data.email);
+    if (!deliverable.ok) {
+      return { ok: false, message: 'Please fix the highlighted fields.', errors: { email: deliverable.reason } };
+    }
   }
 
   const supabase = await createSupabaseServerClient();
@@ -422,6 +432,15 @@ export async function saveProfileAction(_prev: ActionState, formData: FormData):
   if (!parsed.success) {
     return { ok: false, message: 'Please fix the highlighted fields.', errors: fieldErrors(parsed.error) };
   }
+
+  // This one goes on every PDF as the business's own contact address.
+  if (parsed.data.email) {
+    const deliverable = await checkEmailDeliverable(parsed.data.email);
+    if (!deliverable.ok) {
+      return { ok: false, message: 'Please fix the highlighted fields.', errors: { email: deliverable.reason } };
+    }
+  }
+
   return updateBusiness(parsed.data, ['/settings/profile', '/dashboard']);
 }
 

@@ -138,7 +138,7 @@ export function BookDemoFlow() {
   const [notes, setNotes] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [confirmed, setConfirmed] = React.useState<{ whenFormatted: string } | null>(null);
+  const [confirmed, setConfirmed] = React.useState<{ whenFormatted: string; inviteSent: boolean } | null>(null);
   const honeypotRef = React.useRef<HTMLInputElement>(null);
 
   const slotGroups = React.useMemo(() => groupSlotsByPeriod(slots ?? [], timezone), [slots, timezone]);
@@ -204,7 +204,7 @@ export function BookDemoFlow() {
         return;
       }
 
-      setConfirmed({ whenFormatted: payload.whenFormatted });
+      setConfirmed({ whenFormatted: payload.whenFormatted, inviteSent: Boolean(payload.inviteSent) });
     } catch {
       setError('We could not reach the server. Check your connection and try again.');
     } finally {
@@ -218,7 +218,10 @@ export function BookDemoFlow() {
         <CheckCircle2 className="mx-auto h-10 w-10 text-success" />
         <h2 className="text-lg font-semibold">You&apos;re booked</h2>
         <p className="text-sm text-muted-foreground">
-          {confirmed.whenFormatted} on Google Meet. A calendar invite is on its way to {email}.
+          {confirmed.whenFormatted} on Google Meet.{' '}
+          {confirmed.inviteSent
+            ? `A calendar invite is on its way to ${email}.`
+            : `We've got your request and emailed the team — we'll confirm at ${email}.`}
         </p>
         <p className="mx-auto flex max-w-xs items-start gap-2 rounded-lg bg-accent p-3 text-left text-xs text-accent-foreground">
           <Mail className="mt-0.5 h-3.5 w-3.5 shrink-0" />

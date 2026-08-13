@@ -8,14 +8,21 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid min-h-dvh lg:grid-cols-2">
-      <div className="flex flex-col px-6 py-8 sm:px-10">
+    // On lg the two columns each own exactly one viewport: the form column
+    // scrolls inside itself, so a tall form (signup is the tall one) never
+    // pushes the submit button past the fold of the *page* — which is what
+    // happened on a 1366x768 laptop, where the button landed at y=768 with no
+    // hint there was anything below it. Keeping the panel out of that scroll
+    // also means it stays centred against the screen instead of against the
+    // form's height.
+    <div className="grid min-h-dvh lg:h-dvh lg:grid-cols-2 lg:overflow-hidden">
+      <div className="flex flex-col px-6 py-6 sm:px-10 lg:h-dvh lg:overflow-y-auto">
         <Link href="/" className="flex w-fit items-center gap-2.5">
           <InvoraMark />
           <span className="text-[17px] font-semibold tracking-tight">Invora</span>
         </Link>
 
-        <div className="flex flex-1 items-center justify-center py-10">
+        <div className="flex flex-1 items-center justify-center py-6 sm:py-8">
           <div className="w-full max-w-sm">{children}</div>
         </div>
 

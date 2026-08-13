@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import { enforceRateLimit } from '@/lib/guards/rate-limit';
 import { fieldErrors } from '@/lib/validation/common';
 import { contactSchema } from '@/lib/validation/schemas';
+import { checkEmailDeliverable } from '@/lib/validation/email-address';
 import { sendEmail } from '@/lib/email/send';
 import { contactFormEmail } from '@/lib/email/templates';
 
@@ -42,6 +43,12 @@ export async function submitContactAction(_prev: FormState, formData: FormData):
     await enforceRateLimit('contact', await clientIp());
   } catch {
     return { ok: false, message: 'Too many messages sent from here. Please wait a bit and try again.' };
+  }
+
+  // A reply-to we cannot actually reply to makes the whole message useless.
+  const deliverable = await checkEmailDeliverable(parsed.data.email);
+  if (!deliverable.ok) {
+    return { ok: false, errors: { email: deliverable.reason } };
   }
 
   const to = process.env.CONTACT_EMAIL || 'support@invora.app';

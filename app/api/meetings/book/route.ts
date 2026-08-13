@@ -4,6 +4,7 @@ import { badRequest, conflict, withApiErrors } from '@/lib/guards/errors';
 import { clientIp, enforceRateLimit } from '@/lib/guards/rate-limit';
 import { fieldErrors } from '@/lib/validation/common';
 import { bookDemoSchema } from '@/lib/validation/schemas';
+import { checkEmailDeliverable } from '@/lib/validation/email-address';
 import { computeAvailableSlots, SLOT_MINUTES } from '@/lib/meetings/availability';
 import { createMeetEvent, isCalendarConnected } from '@/lib/google/calendar';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
@@ -33,9 +34,12 @@ export const POST = withApiErrors(async (request: NextRequest) => {
     return NextResponse.json({ ok: true });
   }
 
-  const { connected } = await isCalendarConnected();
-  if (!connected) {
-    throw conflict('Demo booking is temporarily unavailable. Please use the contact form instead.');
+  // The whole point of the booking is the invite and the Meet link that follow
+  // it — hold a slot for an address that cannot receive either and the slot is
+  // simply lost.
+  const deliverable = await checkEmailDeliverable(input.email);
+  if (!deliverable.ok) {
+    throw badRequest('Check the form.', { email: deliverable.reason });
   }
 
   const startMs = Date.parse(input.startIso);
@@ -50,14 +54,23 @@ export const POST = withApiErrors(async (request: NextRequest) => {
 
   const endIso = new Date(startMs + SLOT_MINUTES * 60_000).toISOString();
 
-  const meeting = await createMeetEvent({
-    summary: `Invora demo — ${input.name}${input.company ? ` (${input.company})` : ''}`,
-    description: input.notes || 'Booked via the Invora website.',
-    startIso: input.startIso,
-    endIso,
-    attendeeEmail: input.email,
-    attendeeName: input.name,
-  });
+  // A disconnected calendar no longer refuses the booking. The slot is still
+  // held in demo_bookings and the team is still notified by email below —
+  // turning a visitor away because *our* integration is down loses the lead
+  // for a reason that has nothing to do with them. The Meet link is simply
+  // created later, by hand, when there is no calendar to create it now.
+  const { connected } = await isCalendarConnected();
+
+  const meeting = connected
+    ? await createMeetEvent({
+        summary: `Invora demo — ${input.name}${input.company ? ` (${input.company})` : ''}`,
+        description: input.notes || 'Booked via the Invora website.',
+        startIso: input.startIso,
+        endIso,
+        attendeeEmail: input.email,
+        attendeeName: input.name,
+      })
+    : null;
 
   const admin = createSupabaseAdminClient();
   await admin.from('demo_bookings').insert({
@@ -67,8 +80,8 @@ export const POST = withApiErrors(async (request: NextRequest) => {
     notes: input.notes ?? null,
     starts_at: input.startIso,
     ends_at: endIso,
-    google_event_id: meeting.eventId || null,
-    meet_link: meeting.meetLink,
+    google_event_id: meeting?.eventId || null,
+    meet_link: meeting?.meetLink ?? null,
     status: 'confirmed',
   });
 
@@ -109,5 +122,7 @@ export const POST = withApiErrors(async (request: NextRequest) => {
     }),
   ]);
 
-  return NextResponse.json({ ok: true, whenFormatted });
+  // The client words its confirmation differently when no invite went out, so
+  // it never promises a calendar invite that was never created.
+  return NextResponse.json({ ok: true, whenFormatted, inviteSent: Boolean(meeting) });
 });

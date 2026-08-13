@@ -250,7 +250,10 @@ export function DocumentEditor({
         />
       ) : null}
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+      {/* Capped so the form does not sprawl across a wide monitor, but never
+          below the line-items table's own 1080px minimum — narrower than that
+          and the table starts scrolling sideways. */}
+      <div className="mx-auto w-full max-w-6xl">
         <div className="space-y-5">
           <section className="card-surface space-y-4 p-5">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -358,6 +361,90 @@ export function DocumentEditor({
             defaultTaxRate={defaultTaxRate}
           />
 
+          {/* Sits directly under the lines it totals. As a right-hand column
+              it was easy to miss: on a wide screen the numbers ended up far
+              from the rates that produced them, and as soon as the layout
+              stacked it fell below the whole Details section — six textareas
+              of scrolling away from the amounts. Right-aligned and capped in
+              width, the way a printed invoice reads. */}
+          <div className="space-y-4 sm:ml-auto sm:w-full sm:max-w-sm">
+            <section className="card-surface p-5">
+              <h2 className="text-sm font-semibold">Totals</h2>
+
+              <div className="mt-4 space-y-3">
+                <Field label="Tax mode" htmlFor="tax_mode">
+                  <select
+                    value={state.tax_mode}
+                    onChange={(event) =>
+                      patch({ tax_mode: event.target.value as EditorState['tax_mode'] })
+                    }
+                    disabled={readOnly}
+                    className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="exclusive">Tax added to rates</option>
+                    <option value="inclusive">Rates include tax</option>
+                  </select>
+                </Field>
+
+                <Field label="Document discount %" htmlFor="doc_discount">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.01"
+                    value={state.doc_discount_pct}
+                    onChange={(event) =>
+                      patch({
+                        doc_discount_pct: Math.min(100, Math.max(0, Number(event.target.value) || 0)),
+                      })
+                    }
+                    disabled={readOnly}
+                    className="text-right tabular"
+                  />
+                </Field>
+              </div>
+
+              <dl className="mt-5 space-y-2 border-t border-border pt-4 text-sm">
+                <Row
+                  // Inclusive mode: subtotalPaise is tax-exclusive, so it will
+                  // never equal the sum of the (tax-inclusive) per-line
+                  // amounts shown in the table above — labelled accordingly so
+                  // it doesn't read as a math error.
+                  label={state.tax_mode === 'inclusive' ? 'Taxable value' : 'Subtotal'}
+                  value={formatPaise(totals.subtotalPaise, state.currency)}
+                />
+                {totals.discountPaise > 0 ? (
+                  <Row
+                    label={`Discount (${formatPercent(state.doc_discount_pct)})`}
+                    value={`− ${formatPaise(totals.discountPaise, state.currency)}`}
+                  />
+                ) : null}
+                {totals.taxBreakup
+                  .filter((bucket) => bucket.taxPaise > 0)
+                  .map((bucket) => (
+                    <Row
+                      key={bucket.ratePct}
+                      label={`Tax @ ${formatPercent(bucket.ratePct)}`}
+                      value={formatPaise(bucket.taxPaise, state.currency)}
+                    />
+                  ))}
+                <div className="flex items-center justify-between border-t border-border pt-3 text-base font-semibold">
+                  <dt>Total</dt>
+                  <dd className="tabular">{formatPaise(totals.totalPaise, state.currency)}</dd>
+                </div>
+              </dl>
+
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                {amountInWordsIndian(totals.totalPaise, state.currency)}
+              </p>
+            </section>
+
+            <p className="px-1 text-xs leading-relaxed text-muted-foreground">
+              Every figure here is computed by Invora&apos;s calculation engine from your quantities
+              and rates — the same engine the PDF and the payment page use.
+            </p>
+          </div>
+
           <section className="card-surface space-y-4 p-5">
             <h2 className="text-sm font-semibold">Details</h2>
 
@@ -420,83 +507,6 @@ export function DocumentEditor({
           </section>
         </div>
 
-        <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
-          <section className="card-surface p-5">
-            <h2 className="text-sm font-semibold">Totals</h2>
-
-            <div className="mt-4 space-y-3">
-              <Field label="Tax mode" htmlFor="tax_mode">
-                <select
-                  value={state.tax_mode}
-                  onChange={(event) =>
-                    patch({ tax_mode: event.target.value as EditorState['tax_mode'] })
-                  }
-                  disabled={readOnly}
-                  className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"
-                >
-                  <option value="exclusive">Tax added to rates</option>
-                  <option value="inclusive">Rates include tax</option>
-                </select>
-              </Field>
-
-              <Field label="Document discount %" htmlFor="doc_discount">
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step="0.01"
-                  value={state.doc_discount_pct}
-                  onChange={(event) =>
-                    patch({
-                      doc_discount_pct: Math.min(100, Math.max(0, Number(event.target.value) || 0)),
-                    })
-                  }
-                  disabled={readOnly}
-                  className="text-right tabular"
-                />
-              </Field>
-            </div>
-
-            <dl className="mt-5 space-y-2 border-t border-border pt-4 text-sm">
-              <Row
-                // Inclusive mode: subtotalPaise is tax-exclusive, so it will
-                // never equal the sum of the (tax-inclusive) per-line
-                // amounts shown in the table above — labelled accordingly so
-                // it doesn't read as a math error.
-                label={state.tax_mode === 'inclusive' ? 'Taxable value' : 'Subtotal'}
-                value={formatPaise(totals.subtotalPaise, state.currency)}
-              />
-              {totals.discountPaise > 0 ? (
-                <Row
-                  label={`Discount (${formatPercent(state.doc_discount_pct)})`}
-                  value={`− ${formatPaise(totals.discountPaise, state.currency)}`}
-                />
-              ) : null}
-              {totals.taxBreakup
-                .filter((bucket) => bucket.taxPaise > 0)
-                .map((bucket) => (
-                  <Row
-                    key={bucket.ratePct}
-                    label={`Tax @ ${formatPercent(bucket.ratePct)}`}
-                    value={formatPaise(bucket.taxPaise, state.currency)}
-                  />
-                ))}
-              <div className="flex items-center justify-between border-t border-border pt-3 text-base font-semibold">
-                <dt>Total</dt>
-                <dd className="tabular">{formatPaise(totals.totalPaise, state.currency)}</dd>
-              </div>
-            </dl>
-
-            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-              {amountInWordsIndian(totals.totalPaise, state.currency)}
-            </p>
-          </section>
-
-          <p className="px-1 text-xs leading-relaxed text-muted-foreground">
-            Every figure here is computed by Invora&apos;s calculation engine from your quantities
-            and rates — the same engine the PDF and the payment page use.
-          </p>
-        </aside>
       </div>
 
       {isQuote ? (
