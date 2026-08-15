@@ -4,12 +4,10 @@ import { Copy, Trash2 } from 'lucide-react';
 
 import { requireBusiness } from '@/lib/guards/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { listDocumentEvents } from '@/lib/events';
 import { PageHeader } from '@/components/app/page-header';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { StatusBadge } from '@/components/ui/badge';
 import { DocumentEditor } from '@/components/documents/document-editor';
-import { DocumentTimeline } from '@/components/documents/timeline';
 import { DownloadMenu } from '@/components/documents/download-menu';
 import { ShareDialog } from '@/components/documents/share-dialog';
 import { SendDialog } from '@/components/documents/send-dialog';
@@ -42,7 +40,6 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
     .filter((check) => !check.done)
     .map((check) => check.label);
 
-  const events = await listDocumentEvents('invoice', id);
   const customer = invoice.customers as unknown as { name?: string; company?: string; email?: string } | null;
 
   // Once money has been received against an invoice, the amounts are locked.
@@ -164,7 +161,6 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             )}
           </section>
 
-          <DocumentTimeline events={events} />
         </aside>
       </div>
     </>

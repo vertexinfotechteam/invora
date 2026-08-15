@@ -44,6 +44,33 @@ export const POST = withApiErrors(async (request: NextRequest) => {
     );
   }
 
+  // Money received against a draft means the invoice is real, whether or not
+  // it was ever emailed from here — so issue it before the payment lands.
+  //
+  // recalc_invoice_payment_state() deliberately leaves 'draft' and 'cancelled'
+  // alone, so without this the payment would update the balance while the
+  // status stayed 'draft': fully paid, zero balance, and excluded from every
+  // report that filters drafts out. Promoting it first lets that same trigger
+  // compute 'partially_paid' or 'paid' the normal way.
+  if (invoice.status === 'draft') {
+    const { error: issueError } = await supabase
+      .from('invoices')
+      .update({ status: 'sent', sent_at: new Date().toISOString() })
+      .eq('id', invoice.id);
+
+    if (issueError) throw badRequest(`Could not issue the invoice: ${issueError.message}`);
+
+    await recordDocumentEvent({
+      businessId: business.id,
+      docType: 'invoice',
+      docId: invoice.id,
+      event: 'sent',
+      actor: 'user',
+      actorId: user.id,
+      meta: { reason: 'payment_recorded_on_draft' },
+    });
+  }
+
   const paidAt = input.paid_at.includes('T')
     ? input.paid_at
     : new Date(`${input.paid_at}T12:00:00Z`).toISOString();

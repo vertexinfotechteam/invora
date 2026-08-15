@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { requireBusiness } from '@/lib/guards/auth';
-import { badRequest, withApiErrors } from '@/lib/guards/errors';
+import { badRequest, conflict, withApiErrors } from '@/lib/guards/errors';
+import { AI_DISABLED_MESSAGE, AI_ENABLED } from '@/lib/ai/enabled';
 import { runStructuredAi } from '@/lib/ai/pipeline';
 import { InvoiceLineItemsSchema, MessageDraftSchema } from '@/lib/ai/schemas';
 import { INVOICE_SYSTEM_PROMPT } from '@/lib/ai/prompts';
@@ -82,6 +83,10 @@ export const POST = withApiErrors(async (request: NextRequest) => {
     );
     return NextResponse.json({ kind: input.kind, message: result.data, meta: metaOf(result) });
   }
+
+  // Only the line-item generation is switched off — the payment-message
+  // drafter above is a separate feature and keeps working.
+  if (!AI_ENABLED) throw conflict(AI_DISABLED_MESSAGE);
 
   const result = await runStructuredAi(
     { businessId: business.id, userId: user.id },

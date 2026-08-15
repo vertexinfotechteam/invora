@@ -42,18 +42,37 @@ interface RawGeminiResponse {
   usage: GeminiUsage;
 }
 
+/** Gemini Flash returns these while it is busy; the request is fine, the
+ * capacity is not. The Anthropic SDK retries its equivalents for us, so this
+ * gap only became visible once Gemini became the only provider — in testing,
+ * roughly one call in three hit a 503 during a busy spell. */
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+const MAX_ATTEMPTS = 3;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function requestGemini(body: Record<string, unknown>): Promise<RawGeminiResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY is not configured.');
   }
 
-  const response = await fetch(`${ENDPOINT}?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(60_000),
-  });
+  let response!: Response;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    response = await fetch(`${ENDPOINT}?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(60_000),
+    });
+
+    if (response.ok || !RETRYABLE_STATUS.has(response.status) || attempt === MAX_ATTEMPTS) break;
+
+    // 1s, then 2s. Short enough to stay inside the caller's patience, long
+    // enough for a demand spike to pass.
+    await sleep(1000 * attempt);
+  }
 
   if (!response.ok) {
     const errBody = await response.text().catch(() => '');

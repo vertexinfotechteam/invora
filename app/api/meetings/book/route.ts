@@ -104,23 +104,34 @@ export const POST = withApiErrors(async (request: NextRequest) => {
     whenFormatted,
   });
 
-  await Promise.all([
-    sendEmail({
-      to: input.email,
-      subject: mail.subject,
-      html: mail.html,
-      text: mail.text,
-      template: 'demo_booking_confirmation',
-    }),
-    sendEmail({
-      to: process.env.CONTACT_EMAIL || 'support@invora.app',
-      subject: adminMail.subject,
-      html: adminMail.html,
-      text: adminMail.text,
-      replyTo: input.email,
-      template: 'demo_booking_admin_notification',
-    }),
-  ]);
+  // Sent one after the other, not in parallel. Every SMTP provider throttles
+  // bursts — Mailtrap's free tier rejects the second of two simultaneous sends
+  // outright ("550 Too many emails per second"), and Gmail is only more
+  // forgiving, not immune. In parallel that failure is silent and arbitrary:
+  // whichever loses the race is dropped, so either the visitor gets no
+  // confirmation or nobody is told a demo was booked. Sequential costs about a
+  // second on a request that already took several.
+  //
+  // sendEmail never throws — it records the outcome in email_log and returns
+  // {sent:false}. So the second send always runs even if the first failed, and
+  // a mail problem never fails a booking that is already confirmed in the
+  // database.
+  await sendEmail({
+    to: input.email,
+    subject: mail.subject,
+    html: mail.html,
+    text: mail.text,
+    template: 'demo_booking_confirmation',
+  });
+
+  await sendEmail({
+    to: process.env.CONTACT_EMAIL || 'support@invora.app',
+    subject: adminMail.subject,
+    html: adminMail.html,
+    text: adminMail.text,
+    replyTo: input.email,
+    template: 'demo_booking_admin_notification',
+  });
 
   // The client words its confirmation differently when no invite went out, so
   // it never promises a calendar invite that was never created.

@@ -32,7 +32,7 @@ export default async function ReportsPage({
 
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: payments }, { data: invoices }, { data: quotations }, { data: customers }] =
+  const [{ data: payments }, { data: invoices }, { data: customers }] =
     await Promise.all([
       supabase
         .from('payments')
@@ -40,7 +40,6 @@ export default async function ReportsPage({
         .gte('paid_at', since.toISOString())
         .order('paid_at'),
       supabase.from('invoices').select('status, total_paise, balance_paise, issue_date'),
-      supabase.from('quotations').select('status, total_paise, issue_date'),
       supabase
         .from('customers')
         .select('id, name, company')
@@ -56,10 +55,6 @@ export default async function ReportsPage({
     .filter((row) => ['sent', 'viewed', 'partially_paid', 'overdue'].includes(row.status))
     .reduce((sum, row) => sum + row.balance_paise, 0);
 
-  const quotesInWindow = (quotations ?? []).filter((row) => new Date(row.issue_date) >= since);
-  const accepted = quotesInWindow.filter((row) => row.status === 'accepted');
-  const answered = quotesInWindow.filter((row) => ['accepted', 'rejected'].includes(row.status));
-  const winRate = answered.length ? Math.round((accepted.length / answered.length) * 100) : null;
 
   const series = buildDailySeries(payments ?? [], windowDays);
 
@@ -94,7 +89,7 @@ export default async function ReportsPage({
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           label="Collected"
           value={formatPaise(collected, business.currency)}
@@ -106,15 +101,6 @@ export default async function ReportsPage({
           label="Outstanding"
           value={formatPaise(outstanding, business.currency)}
           hint="All unpaid invoices"
-        />
-        <StatCard
-          label="Quotation win rate"
-          value={winRate === null ? '—' : `${winRate}%`}
-          hint={
-            answered.length
-              ? `${accepted.length} accepted of ${answered.length} answered`
-              : 'No responses in this window'
-          }
         />
       </div>
 

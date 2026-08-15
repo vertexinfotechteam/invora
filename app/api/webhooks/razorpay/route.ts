@@ -162,7 +162,7 @@ async function handlePaymentCaptured(event: RazorpayEvent) {
 
   const { data: invoice } = await admin
     .from('invoices')
-    .select('id, business_id, number, currency, balance_paise, customer_id')
+    .select('id, business_id, number, currency, balance_paise, customer_id, status')
     .eq('id', invoiceId)
     .maybeSingle();
 
@@ -182,6 +182,16 @@ async function handlePaymentCaptured(event: RazorpayEvent) {
       paymentId: payment.id,
     });
     return;
+  }
+
+  // Same reasoning as the manual path: the recalc trigger will not move a
+  // 'draft' invoice, so a gateway payment against one would leave it fully
+  // paid and still invisible to every report. Issue it first.
+  if (invoice.status === 'draft') {
+    await admin
+      .from('invoices')
+      .update({ status: 'sent', sent_at: new Date().toISOString() })
+      .eq('id', invoice.id);
   }
 
   // razorpay_payment_id is UNIQUE, so a replayed event that slipped past the

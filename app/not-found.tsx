@@ -5,7 +5,7 @@ import { InvoraMark } from '@/components/marketing/nav';
 export default function NotFound() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-6 px-6 text-center">
-      <InvoraMark className="h-10 w-10" />
+      <InvoraMark className="h-10 w-auto" />
 
       <div className="space-y-2">
         <p className="text-sm font-semibold uppercase tracking-widest text-primary">404</p>

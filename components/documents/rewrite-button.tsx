@@ -4,6 +4,8 @@ import * as React from 'react';
 import { ArrowRight, Languages, TriangleAlert, Wand2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { AI_ENABLED } from '@/lib/ai/enabled';
+
 import {
   Dialog,
   DialogContent,
@@ -79,6 +81,10 @@ export function RewriteButton({
       setPending(false);
     }
   }
+
+  // Placed after the hooks so hook order is unchanged when the flag flips.
+  // Nothing to show beside a field the user can still edit by hand.
+  if (!AI_ENABLED) return null;
 
   return (
     <>

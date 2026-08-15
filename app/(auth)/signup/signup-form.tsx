@@ -7,7 +7,6 @@ import { signUpAction, type FormState } from '../actions';
 import { Button } from '@/components/ui/button';
 import { Input, PasswordInput } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
-import { OAuthButtons } from '@/app/(auth)/oauth-buttons';
 
 const initialState: FormState = { ok: false };
 
@@ -33,14 +32,6 @@ export function SignupForm() {
 
   return (
     <div className="space-y-5">
-      <OAuthButtons next="/settings/profile" />
-
-      <div className="flex items-center gap-3">
-        <div className="h-px flex-1 bg-border" />
-        <span className="text-xs text-muted-foreground">or sign up with email</span>
-        <div className="h-px flex-1 bg-border" />
-      </div>
-
       <form action={formAction} className="space-y-4" noValidate>
       {state.message ? (
         <div

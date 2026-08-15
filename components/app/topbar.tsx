@@ -7,7 +7,6 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ChevronDown, LogOut, Plus, Search, Settings, ShieldCheck, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { initials } from '@/lib/utils';
 
 const QUICK_CREATE = [
@@ -84,7 +83,6 @@ export function Topbar({
       </form>
 
       <div className="ml-auto flex items-center gap-2">
-        <ThemeToggle />
 
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>

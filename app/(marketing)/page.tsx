@@ -470,11 +470,11 @@ function Workflow() {
 }
 
 const TEAM = [
-  { name: 'Tarang Vasoya', role: 'Project Lead & CEO' },
-  { name: 'Het Aghera', role: 'AI & Backend' },
-  { name: 'Om Bardoliya', role: 'Frontend & UI/UX' },
-  { name: 'Dharm Senjaliya', role: 'Product & Database' },
-  { name: 'Navneet Radadiya', role: 'QA & Product' },
+  { name: 'Tarang Vasoya' },
+  { name: 'Om Bardoliya' },
+  { name: 'Het Aghera' },
+  { name: 'Dharm Senjaliya' },
+  { name: 'Navneet Radadiya' },
 ];
 
 function Team() {
@@ -498,7 +498,6 @@ function Team() {
                 </span>
                 <div className="min-w-0">
                   <p className="truncate font-medium">{member.name}</p>
-                  <p className="truncate text-sm text-muted-foreground">{member.role}</p>
                 </div>
               </div>
             </Reveal>

@@ -325,6 +325,51 @@ export function contactFormEmail(input: { name: string; email: string; message: 
  * contactFormEmail — this is Vertex Infotech's own calendar, not any
  * customer's.
  */
+/**
+ * Sent once, right after an account is created. Deliberately does not carry a
+ * verification link — Supabase Auth owns that mail — so this one is purely a
+ * greeting plus the two things a new business needs to do first.
+ */
+export function welcomeEmail(input: { name: string; businessName: string; appUrl: string }) {
+  const { name, businessName, appUrl } = input;
+
+  const html = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Welcome to Invora</title></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 12px;">
+<tr><td align="center">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+         style="max-width:560px;background:#ffffff;border-radius:14px;overflow:hidden;
+                box-shadow:0 1px 3px rgba(15,23,42,.08);">
+    <tr><td style="height:4px;background:#4F46E5;"></td></tr>
+    <tr><td style="padding:28px 32px 4px 32px;">
+      <p style="margin:0;font-size:13px;color:#64748b;font-weight:600;letter-spacing:.4px;">INVORA · WELCOME</p>
+    </td></tr>
+    <tr><td style="padding:12px 32px 8px 32px;color:#0f172a;font-size:15px;line-height:1.6;">
+      <p style="margin:0 0 12px 0;">Hi ${escapeHtml(name)},</p>
+      <p style="margin:0 0 16px 0;">Welcome to Invora — your workspace for <strong>${escapeHtml(businessName)}</strong> is ready.</p>
+      <p style="margin:0 0 8px 0;">Two things worth doing first:</p>
+      <ul style="margin:0 0 18px 0;padding-left:20px;color:#334155;">
+        <li style="margin-bottom:6px;">Add your logo and GSTIN so every quotation and invoice carries them.</li>
+        <li>Create your first quotation — it converts to an invoice in one click.</li>
+      </ul>
+      <p style="margin:0 0 20px 0;">
+        <a href="${escapeHtml(appUrl)}/dashboard"
+           style="display:inline-block;background:#4F46E5;color:#ffffff;text-decoration:none;
+                  padding:11px 20px;border-radius:8px;font-size:14px;font-weight:600;">Open your dashboard</a>
+      </p>
+      <p style="margin:0;color:#64748b;font-size:13px;">Questions? Just reply to this email — a real person reads it.</p>
+    </td></tr>
+  </table>
+</td></tr></table>
+</body></html>`;
+
+  const text = `Welcome to Invora\n\nHi ${name},\n\nWelcome to Invora — your workspace for ${businessName} is ready.\n\nTwo things worth doing first:\n- Add your logo and GSTIN so every quotation and invoice carries them.\n- Create your first quotation — it converts to an invoice in one click.\n\nOpen your dashboard: ${appUrl}/dashboard\n\nQuestions? Just reply to this email — a real person reads it.`;
+
+  return { subject: 'Welcome to Invora', html, text };
+}
+
 export function demoBookingEmail(input: { name: string; whenFormatted: string }) {
   const { name, whenFormatted } = input;
 

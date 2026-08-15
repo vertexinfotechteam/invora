@@ -52,10 +52,8 @@ export default async function AdminMeetingsPage({
     windowsByDay.set(window.weekday, list);
   }
 
-  console.log('[DEBUG] admin/meetings about to render');
   return (
     <div className="space-y-6">
-      <p>DEBUG STATIC TEST OK</p>
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Demo meetings</h1>
         <p className="text-sm text-muted-foreground">

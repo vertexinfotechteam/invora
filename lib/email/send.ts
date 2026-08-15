@@ -4,6 +4,10 @@ import { Resend } from 'resend';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import type { DocumentType } from '@/lib/types/database';
 
+/** Set this and every message goes over SMTP instead of Resend — that is the
+ * whole switch for pointing the app at a Mailtrap inbox. */
+const SMTP_HOST = process.env.SMTP_HOST;
+
 let cached: Resend | null = null;
 
 function getResend(): Resend | null {
@@ -48,9 +52,48 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
   const from = process.env.EMAIL_FROM ?? 'Invora <onboarding@resend.dev>';
   const admin = createSupabaseAdminClient();
 
+  // SMTP wins when it is configured, so pointing the app at a Mailtrap inbox
+  // is an env-only change. Every message still lands in email_log either way,
+  // which keeps "did that actually go out?" answerable without opening a
+  // provider dashboard.
+  if (SMTP_HOST) {
+    try {
+      const nodemailer = await import('nodemailer');
+      const transport = nodemailer.createTransport({
+        host: SMTP_HOST,
+        port: Number(process.env.SMTP_PORT ?? 2525),
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      });
+
+      const info = await transport.sendMail({
+        from,
+        to: input.to,
+        cc: input.cc,
+        subject: input.subject,
+        html: input.html,
+        text: input.text,
+        replyTo: input.replyTo ?? process.env.EMAIL_REPLY_TO,
+        attachments: input.attachments?.map((attachment) => ({
+          filename: attachment.filename,
+          content: attachment.content,
+        })),
+      });
+
+      await recordLog(input, 'sent', info.messageId ?? null);
+      return { sent: true, providerId: info.messageId };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown smtp error';
+      console.error('[invora:email] smtp send failed', error);
+      await recordLog(input, 'failed', null, message);
+      return { sent: false, error: message };
+    }
+  }
+
   if (!resend) {
-    console.info(`[invora:email] RESEND_API_KEY not set — would send "${input.subject}" to ${input.to}`);
-    await recordLog(input, 'skipped', null, 'RESEND_API_KEY not configured');
+    console.info(
+      `[invora:email] no SMTP_HOST and no RESEND_API_KEY — would send "${input.subject}" to ${input.to}`,
+    );
+    await recordLog(input, 'skipped', null, 'no email transport configured');
     return { sent: false, error: 'email_not_configured' };
   }
 

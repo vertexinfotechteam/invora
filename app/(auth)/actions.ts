@@ -6,6 +6,8 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { enforceRateLimit, limiters } from '@/lib/guards/rate-limit';
 import { fieldErrors, safeRedirectPath } from '@/lib/validation/common';
 import { checkEmailDeliverable } from '@/lib/validation/email-address';
+import { sendEmail } from '@/lib/email/send';
+import { welcomeEmail } from '@/lib/email/templates';
 import {
   forgotPasswordSchema,
   resetPasswordSchema,
@@ -92,6 +94,23 @@ export async function signUpAction(_prev: FormState, formData: FormData): Promis
   if (error) {
     return { ok: false, message: error.message };
   }
+
+  // Greeting mail, sent once at sign-up. Deliberately not awaited into the
+  // failure path: a mail provider having a bad minute must never turn a
+  // successful sign-up into an error the visitor sees. sendEmail already
+  // swallows and logs its own failures.
+  const mail = welcomeEmail({
+    name: parsed.data.fullName,
+    businessName: parsed.data.businessName,
+    appUrl: await originUrl(),
+  });
+  await sendEmail({
+    to: parsed.data.email,
+    subject: mail.subject,
+    html: mail.html,
+    text: mail.text,
+    template: 'welcome',
+  });
 
   // If email confirmation is off for this project, Supabase signs the user in
   // immediately and hands back a live session — go straight to the app. If

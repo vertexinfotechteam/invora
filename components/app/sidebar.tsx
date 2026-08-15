@@ -57,7 +57,7 @@ export function Sidebar({ usage, businessName }: { usage: UsageSnapshot; busines
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-muted/25 md:flex">
       <div className="flex h-16 items-center gap-2.5 border-b border-border px-5">
-        <InvoraMark className="h-7 w-7" />
+        <InvoraMark className="h-7 w-auto" />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold leading-tight">Invora</p>
           <p className="truncate text-[11px] leading-tight text-muted-foreground">{businessName}</p>

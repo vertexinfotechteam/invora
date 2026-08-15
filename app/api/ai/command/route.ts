@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { requireBusiness } from '@/lib/guards/auth';
-import { badRequest, notFound, withApiErrors } from '@/lib/guards/errors';
+import { badRequest, conflict, notFound, withApiErrors } from '@/lib/guards/errors';
+import { AI_DISABLED_MESSAGE, AI_ENABLED } from '@/lib/ai/enabled';
 import { runStructuredAi } from '@/lib/ai/pipeline';
 import { CommandPlanSchema } from '@/lib/ai/schemas';
 import { COMMAND_SYSTEM_PROMPT, buildCommandRequest } from '@/lib/ai/prompts';
@@ -25,6 +26,8 @@ export const dynamic = 'force-dynamic';
  *     before/after diff with a totals-delta banner and the user clicks Apply.
  */
 export const POST = withApiErrors(async (request: NextRequest) => {
+  if (!AI_ENABLED) throw conflict(AI_DISABLED_MESSAGE);
+
   const { user, business } = await requireBusiness();
 
   const parsed = aiCommandRequestSchema.safeParse(await request.json());

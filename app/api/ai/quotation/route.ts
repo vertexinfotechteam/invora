@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { requireBusiness } from '@/lib/guards/auth';
-import { withApiErrors, badRequest } from '@/lib/guards/errors';
+import { withApiErrors, badRequest, conflict } from '@/lib/guards/errors';
+import { AI_DISABLED_MESSAGE, AI_ENABLED } from '@/lib/ai/enabled';
 import { runStructuredAi } from '@/lib/ai/pipeline';
 import { QuotationDraftSchema } from '@/lib/ai/schemas';
 import { QUOTATION_SYSTEM_PROMPT, buildQuotationBrief } from '@/lib/ai/prompts';
@@ -20,6 +21,8 @@ export const dynamic = 'force-dynamic';
  * back as chips, not as values in money fields.
  */
 export const POST = withApiErrors(async (request: NextRequest) => {
+  if (!AI_ENABLED) throw conflict(AI_DISABLED_MESSAGE);
+
   // 1 — auth, before the rate limiter (which keys on user id) and before any
   //     provider call. An unauthenticated POST makes zero AI provider requests.
   const { user, business } = await requireBusiness();

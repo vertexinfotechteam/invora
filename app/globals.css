@@ -144,8 +144,11 @@
    * every marketing page — it shares that same muted tint (rather than
    * --background) so there is no visible colour seam at the boundary.
    */
+  /* Light mode reads cleaner on the page background than on --muted, which
+     tinted the bar grey against white sections. The alpha keeps the
+     backdrop-blur visible as content scrolls under it. */
   .marketing-nav-surface {
-    background: hsl(var(--muted) / 0.82);
+    background: hsl(var(--background) / 0.85);
   }
   .dark .marketing-nav-surface {
     background: hsl(var(--muted) / 0.75);

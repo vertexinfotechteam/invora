@@ -2,9 +2,14 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { asSessionCookie } from '@/lib/supabase/session-cookie';
 
+// Every authenticated route belongs here. A page left off the list is still
+// guarded by its own requireUser/requireBusiness call, but that guard redirects
+// to a bare /login with no `next`, so the visitor is dropped on the dashboard
+// after signing in instead of the page they asked for.
 const PROTECTED_PREFIXES = [
   '/dashboard', '/customers', '/products', '/quotations', '/invoices',
-  '/payments', '/reports', '/settings', '/assistant', '/admin',
+  '/payments', '/reports', '/settings', '/assistant', '/search',
+  '/onboarding', '/admin',
 ];
 
 const AUTH_ROUTES = ['/login', '/signup', '/forgot-password'];

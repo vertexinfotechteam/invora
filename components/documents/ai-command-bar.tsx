@@ -10,6 +10,7 @@ import { formatPaise } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import type { TaxMode } from '@/lib/calc/totals';
 import type { EditorLine } from '@/components/documents/types';
+import { AI_ENABLED } from '@/lib/ai/enabled';
 
 interface Preview {
   applied: boolean;
@@ -136,6 +137,9 @@ export function AiCommandBar({
   }
 
   const delta = preview?.totalDeltaPaise ?? 0;
+
+  // After the hooks, so hook order is unchanged when the flag flips.
+  if (!AI_ENABLED) return null;
 
   return (
     <div className="card-surface overflow-hidden">

@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { requireBusiness } from '@/lib/guards/auth';
-import { badRequest, withApiErrors } from '@/lib/guards/errors';
+import { badRequest, conflict, withApiErrors } from '@/lib/guards/errors';
+import { AI_DISABLED_MESSAGE, AI_ENABLED } from '@/lib/ai/enabled';
 import { runStructuredAi } from '@/lib/ai/pipeline';
 import { RewriteResultSchema } from '@/lib/ai/schemas';
 import { REWRITE_SYSTEM_PROMPT, buildRewriteRequest } from '@/lib/ai/prompts';
@@ -40,6 +41,8 @@ function extractTokens(text: string): string[] {
  * rendering that helpfully localises "₹1,20,000" is a commercial defect.
  */
 export const POST = withApiErrors(async (request: NextRequest) => {
+  if (!AI_ENABLED) throw conflict(AI_DISABLED_MESSAGE);
+
   const { user, business } = await requireBusiness();
 
   const parsed = aiRewriteRequestSchema.safeParse(await request.json());

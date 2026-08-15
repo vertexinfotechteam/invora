@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { cn } from '@/lib/utils';
 
 const LINKS = [
@@ -54,7 +53,6 @@ export function MarketingNav() {
         </div>
 
         <div className="hidden items-center gap-2 md:flex">
-          <ThemeToggle />
           <Button asChild variant="ghost" size="sm">
             <Link href="/login">Sign in</Link>
           </Button>
@@ -64,7 +62,6 @@ export function MarketingNav() {
         </div>
 
         <div className="flex items-center gap-1 md:hidden">
-          <ThemeToggle />
           <button
             type="button"
             className="rounded-md p-2 text-muted-foreground"
@@ -107,10 +104,13 @@ export function InvoraMark({ className }: { className?: string }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src="/logo-mark.png"
+      src="/logo.png"
+      // Decorative: the "Invora" text beside it carries the name. The blend
+      // mode drops the artwork's white background into the cream nav surface —
+      // multiply leaves white transparent and everything darker untouched.
       alt=""
       aria-hidden
-      className={cn('h-8 w-8 shrink-0 object-contain', className)}
+      className={cn('h-10 w-auto shrink-0 object-contain mix-blend-multiply', className)}
     />
   );
 }

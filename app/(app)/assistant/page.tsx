@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Calculator, Languages, MessageSquareText, Shield, Sparkles, Wand2 } from 'lucide-react';
+import { Calculator, Languages, PauseCircle, Shield, Sparkles, Wand2 } from 'lucide-react';
+
+import { AI_ENABLED } from '@/lib/ai/enabled';
 
 import { requireBusiness } from '@/lib/guards/auth';
 import { getUsageSnapshot } from '@/lib/guards/quota';
@@ -18,15 +20,39 @@ export default async function AssistantPage() {
   const { business } = await requireBusiness();
   const admin = createSupabaseAdminClient();
 
-  const [usage, { data: logs }] = await Promise.all([
-    getUsageSnapshot(business.id),
-    admin
-      .from('ai_usage_logs')
-      .select('feature, model, status, latency_ms, created_at, credit_charged')
-      .eq('business_id', business.id)
-      .order('created_at', { ascending: false })
-      .limit(15),
-  ]);
+  // The rewrite, translate and command-bar tools live *inside* a document, so
+  // the cards below need a real document to open. Pointing them at the list
+  // pages meant "Open a document →" landed you on a list — or, with nothing
+  // saved yet, on an empty state — which reads as the feature being broken.
+  const [usage, { data: logs }, { data: latestQuotation }, { data: latestInvoice }] =
+    await Promise.all([
+      getUsageSnapshot(business.id),
+      admin
+        .from('ai_usage_logs')
+        .select('feature, model, status, latency_ms, created_at, credit_charged')
+        .eq('business_id', business.id)
+        .order('created_at', { ascending: false })
+        .limit(15),
+      admin
+        .from('quotations')
+        .select('id')
+        .eq('business_id', business.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      admin
+        .from('invoices')
+        .select('id')
+        .eq('business_id', business.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+  const quotationHref = latestQuotation ? `/quotations/${latestQuotation.id}` : '/quotations/new';
+  const quotationCta = latestQuotation ? 'Open your latest quotation' : 'Create a quotation first';
+  const invoiceHref = latestInvoice ? `/invoices/${latestInvoice.id}` : '/invoices/new';
+  const invoiceCta = latestInvoice ? 'Open your latest invoice' : 'Create an invoice first';
 
   const remaining = Math.max(0, usage.aiCreditLimit - usage.aiCreditsUsed);
 
@@ -36,14 +62,27 @@ export default async function AssistantPage() {
         title="AI Assistant"
         description="Drafting help for the words. The numbers stay with Invora."
         actions={
-          <Button asChild>
-            <Link href="/quotations/new?ai=1">
-              <Sparkles className="h-4 w-4" />
-              Generate a quotation
-            </Link>
-          </Button>
+          AI_ENABLED ? (
+            <Button asChild>
+              <Link href="/quotations/new?ai=1">
+                <Sparkles className="h-4 w-4" />
+                Generate a quotation
+              </Link>
+            </Button>
+          ) : null
         }
       />
+
+      {!AI_ENABLED ? (
+        <div className="card-surface mb-6 flex items-start gap-3 border-warning/30 bg-warning/[0.06] p-4 text-sm">
+          <PauseCircle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+          <p>
+            <strong className="font-medium">AI features are paused.</strong> Quotation generation,
+            rewrite, translate and the command bar are switched off for now — every other part of
+            Invora works as usual, and no AI credits are being spent.
+          </p>
+        </div>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
@@ -76,35 +115,47 @@ export default async function AssistantPage() {
                 {
                   icon: Wand2,
                   title: 'Rewrite any passage',
-                  body: 'Professionalize, shorten, expand or fix grammar — with a before-and-after diff.',
-                  href: '/quotations',
-                  cta: 'Open a document',
+                  body: 'Professionalize, shorten, expand or fix grammar — with a before-and-after diff. Use the Rewrite button beside any long field.',
+                  href: quotationHref,
+                  cta: quotationCta,
                 },
                 {
                   icon: Languages,
                   title: 'Translate a document',
-                  body: 'Send in Hindi, Marathi or Gujarati. Numbers, dates and references stay identical.',
-                  href: '/quotations',
-                  cta: 'Open a document',
+                  body: 'Send in Hindi, Marathi or Gujarati. Numbers, dates and references stay identical. Pick Translate from the same Rewrite button.',
+                  href: quotationHref,
+                  cta: quotationCta,
                 },
                 {
                   icon: Calculator,
                   title: 'Command bar edits',
-                  body: '“Give 5% discount.” Invora recomputes the totals and shows a diff before applying.',
-                  href: '/invoices',
-                  cta: 'Open an invoice',
+                  body: '“Give 5% discount.” Invora recomputes the totals and shows a diff before applying. The command bar sits above the line items.',
+                  href: invoiceHref,
+                  cta: invoiceCta,
                 },
               ].map((item) => (
-                <article key={item.title} className="rounded-lg border border-border p-4">
+                <article
+                  key={item.title}
+                  className={`rounded-lg border border-border p-4${AI_ENABLED ? '' : ' opacity-60'}`}
+                >
                   <item.icon className="h-4 w-4 text-primary" />
                   <h3 className="mt-2 text-sm font-medium">{item.title}</h3>
                   <p className="mt-1 text-xs text-muted-foreground">{item.body}</p>
-                  <Link
-                    href={item.href}
-                    className="mt-2 inline-block text-xs font-medium text-primary underline-offset-4 hover:underline"
-                  >
-                    {item.cta} →
-                  </Link>
+                  {/* Paused: the description stays so people know what is
+                      coming back, but the link goes — it would lead to a
+                      control that is no longer rendered. */}
+                  {AI_ENABLED ? (
+                    <Link
+                      href={item.href}
+                      className="mt-2 inline-block text-xs font-medium text-primary underline-offset-4 hover:underline"
+                    >
+                      {item.cta} →
+                    </Link>
+                  ) : (
+                    <p className="mt-2 text-xs font-medium text-muted-foreground">
+                      Paused for now
+                    </p>
+                  )}
                 </article>
               ))}
             </div>

@@ -4,6 +4,8 @@ import * as React from 'react';
 import { AlertCircle, Info, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { AI_ENABLED } from '@/lib/ai/enabled';
+
 import {
   Dialog,
   DialogContent,
@@ -87,6 +89,9 @@ export function AiGenerateDialog({
       setPending(false);
     }
   }
+
+  // After the hooks, so hook order is unchanged when the flag flips.
+  if (!AI_ENABLED) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
