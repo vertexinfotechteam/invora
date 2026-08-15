@@ -27,7 +27,24 @@ const hasRedis = Boolean(
   process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN,
 );
 
-const redis = hasRedis ? Redis.fromEnv() : null;
+// Redis.fromEnv() parses UPSTASH_REDIS_REST_URL as a URL and throws if it's
+// malformed — a stray trailing slash, quotes, or whitespace from a pasted
+// value is enough. This runs at module scope, so nearly every API route
+// imports it, and an unhandled throw here doesn't just disable rate limiting
+// — it fails the entire production build. The whole point of `hasRedis` above
+// is to degrade gracefully when Redis is absent (see the comment below); a
+// bad value must degrade the same way, not crash harder than no value at all.
+let redis: Redis | null = null;
+if (hasRedis) {
+  try {
+    redis = Redis.fromEnv();
+  } catch (error) {
+    console.error(
+      '[invora:rate-limit] UPSTASH_REDIS_REST_URL/TOKEN are set but invalid — falling back to the in-memory limiter. Check for extra whitespace or quotes in the Vercel env var values.',
+      error,
+    );
+  }
+}
 
 const MINUTE = 60_000;
 
