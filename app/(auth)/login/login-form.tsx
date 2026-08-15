@@ -1,30 +1,41 @@
 'use client';
 
+import * as React from 'react';
 import Link from 'next/link';
 import { useActionState } from 'react';
 import { AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { signInAction, type FormState } from '../actions';
 import { Button } from '@/components/ui/button';
 import { Input, PasswordInput } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
-import { OAuthButtons } from '@/app/(auth)/oauth-buttons';
+import { useClientValidation } from '@/hooks/use-client-validation';
+import { loginSchema } from '@/lib/validation/yup-schemas';
 
 const initialState: FormState = { ok: false };
 
 export function LoginForm({ next }: { next?: string }) {
   const [state, formAction, pending] = useActionState(signInAction, initialState);
+  const { errors: clientErrors, validate } = useClientValidation(loginSchema);
+
+  // Success shows via a flash toast on the destination page — signInAction
+  // redirects on success, so this component unmounts before any state here
+  // could ever become {ok:true}. Only the failure path resolves back to us.
+  React.useEffect(() => {
+    if (state === initialState) return;
+    if (!state.ok && state.message) toast.error(state.message);
+  }, [state]);
 
   return (
     <div className="space-y-5">
-      <OAuthButtons next={next} />
-
-      <div className="flex items-center gap-3">
-        <div className="h-px flex-1 bg-border" />
-        <span className="text-xs text-muted-foreground">or sign in with email</span>
-        <div className="h-px flex-1 bg-border" />
-      </div>
-
-      <form action={formAction} className="space-y-4" noValidate>
+      <form
+        action={formAction}
+        onSubmit={(event) => {
+          if (!validate(new FormData(event.currentTarget))) event.preventDefault();
+        }}
+        className="space-y-4"
+        noValidate
+      >
       <input type="hidden" name="next" value={next ?? '/dashboard'} />
 
       {state.message && !state.ok ? (
@@ -37,24 +48,24 @@ export function LoginForm({ next }: { next?: string }) {
         </div>
       ) : null}
 
-      <Field label="Email" htmlFor="email" error={state.errors?.email} required>
+      <Field label="Email" htmlFor="email" error={clientErrors.email ?? state.errors?.email} required>
         <Input
           name="email"
           type="email"
           autoComplete="email"
           placeholder="you@company.com"
           required
-          invalid={Boolean(state.errors?.email)}
+          invalid={Boolean(clientErrors.email ?? state.errors?.email)}
         />
       </Field>
 
-      <Field label="Password" htmlFor="password" error={state.errors?.password} required>
+      <Field label="Password" htmlFor="password" error={clientErrors.password ?? state.errors?.password} required>
         <PasswordInput
           name="password"
           autoComplete="current-password"
           placeholder="••••••••••"
           required
-          invalid={Boolean(state.errors?.password)}
+          invalid={Boolean(clientErrors.password ?? state.errors?.password)}
         />
       </Field>
 

@@ -1,12 +1,16 @@
 'use client';
 
+import * as React from 'react';
 import { useActionState } from 'react';
 import { AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { saveCustomerAction, type ActionState } from '@/app/(app)/actions';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
+import { useClientValidation } from '@/hooks/use-client-validation';
+import { customerSchema } from '@/lib/validation/yup-schemas';
 import type { Customer } from '@/lib/types/database';
 
 const initialState: ActionState = { ok: false };
@@ -14,9 +18,24 @@ const initialState: ActionState = { ok: false };
 export function CustomerForm({ customer }: { customer?: Customer }) {
   const action = saveCustomerAction.bind(null, customer?.id ?? null);
   const [state, formAction, pending] = useActionState(action, initialState);
+  const { errors: clientErrors, validate } = useClientValidation(customerSchema);
+
+  // Success shows via a flash toast on the destination page —
+  // saveCustomerAction redirects on success, unmounting this component.
+  React.useEffect(() => {
+    if (state === initialState) return;
+    if (!state.ok && state.message) toast.error(state.message);
+  }, [state]);
 
   return (
-    <form action={formAction} className="space-y-6" noValidate>
+    <form
+      action={formAction}
+      onSubmit={(event) => {
+        if (!validate(new FormData(event.currentTarget))) event.preventDefault();
+      }}
+      className="space-y-6"
+      noValidate
+    >
       {state.message ? (
         <div
           role="alert"
@@ -31,25 +50,44 @@ export function CustomerForm({ customer }: { customer?: Customer }) {
         <h2 className="text-sm font-semibold">Contact</h2>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Contact name" htmlFor="name" error={state.errors?.name} required>
-            <Input name="name" defaultValue={customer?.name} required invalid={Boolean(state.errors?.name)} />
+          <Field label="Contact name" htmlFor="name" error={clientErrors.name ?? state.errors?.name} required>
+            <Input
+              name="name"
+              defaultValue={customer?.name}
+              required
+              invalid={Boolean(clientErrors.name ?? state.errors?.name)}
+            />
           </Field>
-          <Field label="Company" htmlFor="company" error={state.errors?.company}>
+          <Field label="Company" htmlFor="company" error={clientErrors.company ?? state.errors?.company}>
             <Input name="company" defaultValue={customer?.company ?? ''} />
           </Field>
-          <Field label="Email" htmlFor="email" error={state.errors?.email}>
-            <Input name="email" type="email" defaultValue={customer?.email ?? ''} />
+          <Field label="Email" htmlFor="email" error={clientErrors.email ?? state.errors?.email}>
+            <Input
+              name="email"
+              type="email"
+              defaultValue={customer?.email ?? ''}
+              invalid={Boolean(clientErrors.email ?? state.errors?.email)}
+            />
           </Field>
-          <Field label="Phone" htmlFor="phone" error={state.errors?.phone}>
-            <Input name="phone" defaultValue={customer?.phone ?? ''} />
+          <Field label="Phone" htmlFor="phone" error={clientErrors.phone ?? state.errors?.phone}>
+            <Input
+              name="phone"
+              defaultValue={customer?.phone ?? ''}
+              invalid={Boolean(clientErrors.phone ?? state.errors?.phone)}
+            />
           </Field>
           <Field
             label="GSTIN"
             htmlFor="gstin"
             hint="Required on their side for input tax credit."
-            error={state.errors?.gstin}
+            error={clientErrors.gstin ?? state.errors?.gstin}
           >
-            <Input name="gstin" defaultValue={customer?.gstin ?? ''} className="uppercase" />
+            <Input
+              name="gstin"
+              defaultValue={customer?.gstin ?? ''}
+              className="uppercase"
+              invalid={Boolean(clientErrors.gstin ?? state.errors?.gstin)}
+            />
           </Field>
         </div>
       </section>

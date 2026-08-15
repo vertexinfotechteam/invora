@@ -17,6 +17,12 @@ import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
 import { Switch } from '@/components/ui/misc';
+import * as yup from 'yup';
+
+const emailFormat = yup.string().trim().email();
+function isValidEmail(value: string): boolean {
+  return emailFormat.isValidSync(value);
+}
 
 export function SendDialog({
   docType,
@@ -128,12 +134,13 @@ export function SendDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <Field label="To" htmlFor="send-to" required>
+          <Field label="To" htmlFor="send-to" error={to && !isValidEmail(to) ? 'Enter a valid email address.' : undefined} required>
             <Input
               type="email"
               value={to}
               onChange={(event) => setTo(event.target.value)}
               placeholder="client@company.com"
+              invalid={Boolean(to) && !isValidEmail(to)}
             />
           </Field>
 
@@ -174,7 +181,7 @@ export function SendDialog({
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={send} loading={pending} disabled={!to.includes('@')}>
+            <Button onClick={send} loading={pending} disabled={!isValidEmail(to)}>
               <Send className="h-4 w-4" />
               Send now
             </Button>

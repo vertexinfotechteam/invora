@@ -1,16 +1,27 @@
 'use client';
 
+import * as React from 'react';
 import { useActionState } from 'react';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { submitContactAction, type FormState } from './actions';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
+import { useClientValidation } from '@/hooks/use-client-validation';
+import { contactSchema } from '@/lib/validation/yup-schemas';
 
 const initialState: FormState = { ok: false };
 
 export function ContactForm({ defaultMessage }: { defaultMessage?: string }) {
   const [state, formAction, pending] = useActionState(submitContactAction, initialState);
+  const { errors: clientErrors, validate } = useClientValidation(contactSchema);
+
+  React.useEffect(() => {
+    if (state === initialState) return;
+    if (state.ok) toast.success(state.message ?? 'Message sent.');
+    else if (state.message) toast.error(state.message);
+  }, [state]);
 
   if (state.ok) {
     return (
@@ -23,7 +34,14 @@ export function ContactForm({ defaultMessage }: { defaultMessage?: string }) {
   }
 
   return (
-    <form action={formAction} className="card-surface space-y-4 p-6" noValidate>
+    <form
+      action={formAction}
+      onSubmit={(event) => {
+        if (!validate(new FormData(event.currentTarget))) event.preventDefault();
+      }}
+      className="card-surface space-y-4 p-6"
+      noValidate
+    >
       {state.message ? (
         <div
           role="alert"
@@ -34,25 +52,31 @@ export function ContactForm({ defaultMessage }: { defaultMessage?: string }) {
         </div>
       ) : null}
 
-      <Field label="Your name" htmlFor="name" error={state.errors?.name} required>
-        <Input name="name" autoComplete="name" placeholder="Priya Sharma" required invalid={Boolean(state.errors?.name)} />
+      <Field label="Your name" htmlFor="name" error={clientErrors.name ?? state.errors?.name} required>
+        <Input
+          name="name"
+          autoComplete="name"
+          placeholder="Priya Sharma"
+          required
+          invalid={Boolean(clientErrors.name ?? state.errors?.name)}
+        />
       </Field>
 
-      <Field label="Email" htmlFor="email" error={state.errors?.email} required>
+      <Field label="Email" htmlFor="email" error={clientErrors.email ?? state.errors?.email} required>
         <Input
           name="email"
           type="email"
           autoComplete="email"
           placeholder="you@company.com"
           required
-          invalid={Boolean(state.errors?.email)}
+          invalid={Boolean(clientErrors.email ?? state.errors?.email)}
         />
       </Field>
 
       <Field
         label="How can we help?"
         htmlFor="message"
-        error={state.errors?.message}
+        error={clientErrors.message ?? state.errors?.message}
         hint="Tell us what you're trying to do — the more detail, the faster we can help."
         required
       >
@@ -62,7 +86,7 @@ export function ContactForm({ defaultMessage }: { defaultMessage?: string }) {
           defaultValue={defaultMessage}
           placeholder="I'd like to ask about…"
           required
-          invalid={Boolean(state.errors?.message)}
+          invalid={Boolean(clientErrors.message ?? state.errors?.message)}
         />
       </Field>
 

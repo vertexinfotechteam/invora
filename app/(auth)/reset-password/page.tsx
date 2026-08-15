@@ -1,10 +1,14 @@
 'use client';
 
+import * as React from 'react';
 import { useActionState } from 'react';
+import { toast } from 'sonner';
 import { resetPasswordAction, type FormState } from '../actions';
 import { Button } from '@/components/ui/button';
 import { PasswordInput } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
+import { useClientValidation } from '@/hooks/use-client-validation';
+import { resetPasswordSchema } from '@/lib/validation/yup-schemas';
 
 const initialState: FormState = { ok: false };
 
@@ -15,6 +19,15 @@ const initialState: FormState = { ok: false };
  */
 export default function ResetPasswordPage() {
   const [state, formAction, pending] = useActionState(resetPasswordAction, initialState);
+  const { errors: clientErrors, validate } = useClientValidation(resetPasswordSchema);
+
+  // Only the failure path resolves here — resetPasswordAction redirects to
+  // /dashboard on success (with its own flash toast), which unmounts this
+  // component before any client state could reflect that outcome.
+  React.useEffect(() => {
+    if (state === initialState) return;
+    if (!state.ok && state.message) toast.error(state.message);
+  }, [state]);
 
   return (
     <div className="space-y-6">
@@ -25,7 +38,14 @@ export default function ResetPasswordPage() {
         </p>
       </div>
 
-      <form action={formAction} className="space-y-4" noValidate>
+      <form
+        action={formAction}
+        onSubmit={(event) => {
+          if (!validate(new FormData(event.currentTarget))) event.preventDefault();
+        }}
+        className="space-y-4"
+        noValidate
+      >
         {state.message ? (
           <p
             role="alert"
@@ -35,26 +55,26 @@ export default function ResetPasswordPage() {
           </p>
         ) : null}
 
-        <Field label="New password" htmlFor="password" error={state.errors?.password} required>
+        <Field label="New password" htmlFor="password" error={clientErrors.password ?? state.errors?.password} required>
           <PasswordInput
             name="password"
             autoComplete="new-password"
             required
-            invalid={Boolean(state.errors?.password)}
+            invalid={Boolean(clientErrors.password ?? state.errors?.password)}
           />
         </Field>
 
         <Field
           label="Confirm new password"
           htmlFor="confirmPassword"
-          error={state.errors?.confirmPassword}
+          error={clientErrors.confirmPassword ?? state.errors?.confirmPassword}
           required
         >
           <PasswordInput
             name="confirmPassword"
             autoComplete="new-password"
             required
-            invalid={Boolean(state.errors?.confirmPassword)}
+            invalid={Boolean(clientErrors.confirmPassword ?? state.errors?.confirmPassword)}
           />
         </Field>
 

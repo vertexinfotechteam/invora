@@ -12,6 +12,7 @@ import { ApiError } from '@/lib/guards/errors';
 import { requireDocumentQuota } from '@/lib/guards/quota';
 import { fieldErrors } from '@/lib/validation/common';
 import { checkEmailDeliverable } from '@/lib/validation/email-address';
+import { setFlashToast } from '@/lib/flash';
 import {
   businessBankSchema,
   businessBrandingSchema,
@@ -90,6 +91,7 @@ export async function saveCustomerAction(
   }
 
   revalidatePath('/customers');
+  await setFlashToast('success', customerId ? 'Customer updated.' : 'Customer added.');
   redirect(`/customers/${targetId}`);
 }
 
@@ -104,6 +106,7 @@ export async function archiveCustomerAction(customerId: string): Promise<void> {
     .eq('business_id', business.id);
 
   revalidatePath('/customers');
+  await setFlashToast('success', 'Customer archived.');
   redirect('/customers');
 }
 
@@ -146,6 +149,7 @@ export async function saveProductAction(
   }
 
   revalidatePath('/products');
+  await setFlashToast('success', productId ? 'Item updated.' : 'Item added to catalog.');
   redirect('/products');
 }
 
@@ -247,6 +251,7 @@ export async function convertQuotationAction(quotationId: string): Promise<void>
 
   revalidatePath('/invoices');
   revalidatePath('/quotations');
+  await setFlashToast('success', 'Converted to an invoice.');
   redirect(`/invoices/${invoiceId as unknown as string}`);
 }
 
@@ -352,6 +357,7 @@ export async function duplicateDocumentAction(
   });
 
   revalidatePath(`/${table}`);
+  await setFlashToast('success', 'Duplicated.');
   redirect(`/${table}/${created.id}`);
 }
 
@@ -407,6 +413,7 @@ export async function deleteDraftAction(docType: DocumentType, docId: string): P
     .eq('status', 'draft');
 
   revalidatePath(`/${table}`);
+  await setFlashToast('success', 'Draft deleted.');
   redirect(`/${table}`);
 }
 

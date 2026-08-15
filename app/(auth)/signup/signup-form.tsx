@@ -1,17 +1,33 @@
 'use client';
 
+import * as React from 'react';
 import Link from 'next/link';
 import { useActionState } from 'react';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { signUpAction, type FormState } from '../actions';
 import { Button } from '@/components/ui/button';
 import { Input, PasswordInput } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
+import { OAuthButtons } from '@/app/(auth)/oauth-buttons';
+import { useClientValidation } from '@/hooks/use-client-validation';
+import { signupSchema } from '@/lib/validation/yup-schemas';
 
 const initialState: FormState = { ok: false };
 
 export function SignupForm() {
   const [state, formAction, pending] = useActionState(signUpAction, initialState);
+  const { errors: clientErrors, validate } = useClientValidation(signupSchema);
+
+  // Covers both outcomes that can actually reach this component: email
+  // confirmation required (state.ok, no redirect — inline screen below) and
+  // a rejected submission. The immediate-session success case redirects
+  // straight to /dashboard and shows its flash toast there instead.
+  React.useEffect(() => {
+    if (state === initialState) return;
+    if (state.ok) toast.success(state.message ?? 'Check your email to finish signing up.');
+    else if (state.message) toast.error(state.message);
+  }, [state]);
 
   if (state.ok) {
     return (
@@ -32,7 +48,22 @@ export function SignupForm() {
 
   return (
     <div className="space-y-5">
-      <form action={formAction} className="space-y-4" noValidate>
+      <OAuthButtons next="/settings/profile" />
+
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs text-muted-foreground">or sign up with email</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
+      <form
+        action={formAction}
+        onSubmit={(event) => {
+          if (!validate(new FormData(event.currentTarget))) event.preventDefault();
+        }}
+        className="space-y-4"
+        noValidate
+      >
       {state.message ? (
         <div
           role="alert"
@@ -46,13 +77,13 @@ export function SignupForm() {
       {/* Paired so the whole form clears the fold on a 1366x768 laptop —
           five stacked fields plus the OAuth block did not. */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Your name" htmlFor="fullName" error={state.errors?.fullName} required>
+        <Field label="Your name" htmlFor="fullName" error={clientErrors.fullName ?? state.errors?.fullName} required>
           <Input
             name="fullName"
             autoComplete="name"
             placeholder="Priya Sharma"
             required
-            invalid={Boolean(state.errors?.fullName)}
+            invalid={Boolean(clientErrors.fullName ?? state.errors?.fullName)}
           />
         </Field>
 
@@ -60,7 +91,7 @@ export function SignupForm() {
           label="Business name"
           htmlFor="businessName"
           hint="Shown on your quotations and invoices."
-          error={state.errors?.businessName}
+          error={clientErrors.businessName ?? state.errors?.businessName}
           required
         >
           <Input
@@ -68,19 +99,19 @@ export function SignupForm() {
             autoComplete="organization"
             placeholder="Sharma Design Studio"
             required
-            invalid={Boolean(state.errors?.businessName)}
+            invalid={Boolean(clientErrors.businessName ?? state.errors?.businessName)}
           />
         </Field>
       </div>
 
-      <Field label="Work email" htmlFor="email" error={state.errors?.email} required>
+      <Field label="Work email" htmlFor="email" error={clientErrors.email ?? state.errors?.email} required>
         <Input
           name="email"
           type="email"
           autoComplete="email"
           placeholder="you@company.com"
           required
-          invalid={Boolean(state.errors?.email)}
+          invalid={Boolean(clientErrors.email ?? state.errors?.email)}
         />
       </Field>
 
@@ -88,28 +119,28 @@ export function SignupForm() {
         <Field
           label="Password"
           htmlFor="password"
-          error={state.errors?.password}
+          error={clientErrors.password ?? state.errors?.password}
           required
         >
           <PasswordInput
             name="password"
             autoComplete="new-password"
             required
-            invalid={Boolean(state.errors?.password)}
+            invalid={Boolean(clientErrors.password ?? state.errors?.password)}
           />
         </Field>
 
         <Field
           label="Confirm password"
           htmlFor="confirmPassword"
-          error={state.errors?.confirmPassword}
+          error={clientErrors.confirmPassword ?? state.errors?.confirmPassword}
           required
         >
           <PasswordInput
             name="confirmPassword"
             autoComplete="new-password"
             required
-            invalid={Boolean(state.errors?.confirmPassword)}
+            invalid={Boolean(clientErrors.confirmPassword ?? state.errors?.confirmPassword)}
           />
         </Field>
       </div>
@@ -140,9 +171,9 @@ export function SignupForm() {
           .
         </span>
       </label>
-      {state.errors?.acceptTerms ? (
+      {clientErrors.acceptTerms ?? state.errors?.acceptTerms ? (
         <p role="alert" className="text-xs font-medium text-destructive">
-          {state.errors.acceptTerms}
+          {clientErrors.acceptTerms ?? state.errors?.acceptTerms}
         </p>
       ) : null}
 

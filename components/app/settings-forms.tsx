@@ -1,7 +1,9 @@
 'use client';
 
+import * as React from 'react';
 import { useActionState } from 'react';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import {
   saveBankAction,
@@ -14,9 +16,29 @@ import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
 import { LogoUploader } from '@/components/app/logo-uploader';
+import { useClientValidation } from '@/hooks/use-client-validation';
+import {
+  businessBankSchema,
+  businessDefaultsSchema,
+  businessProfileSchema,
+} from '@/lib/validation/yup-schemas';
 import type { Business } from '@/lib/types/database';
 
 const initialState: ActionState = { ok: false };
+
+/**
+ * None of these four settings actions redirect — each returns
+ * `{ok, message}` straight back to the form that called it — so a toast can
+ * just watch the state directly, unlike the redirect-based forms elsewhere
+ * that need the flash-cookie handoff (see lib/flash.ts).
+ */
+function useActionToast(state: ActionState) {
+  React.useEffect(() => {
+    if (state === initialState) return;
+    if (state.ok) toast.success(state.message ?? 'Saved.');
+    else if (state.message) toast.error(state.message);
+  }, [state]);
+}
 
 function Banner({ state }: { state: ActionState }) {
   if (!state.message) return null;
@@ -43,10 +65,22 @@ function Banner({ state }: { state: ActionState }) {
 export function ProfileForm({ business }: { business: Business }) {
   const [state, formAction, pending] = useActionState(saveProfileAction, initialState);
   const [bankState, bankAction, bankPending] = useActionState(saveBankAction, initialState);
+  const { errors: clientErrors, validate } = useClientValidation(businessProfileSchema);
+  const { errors: bankClientErrors, validate: validateBank } = useClientValidation(businessBankSchema);
+
+  useActionToast(state);
+  useActionToast(bankState);
 
   return (
     <>
-      <form action={formAction} className="space-y-6" noValidate>
+      <form
+        action={formAction}
+        onSubmit={(event) => {
+          if (!validate(new FormData(event.currentTarget))) event.preventDefault();
+        }}
+        className="space-y-6"
+        noValidate
+      >
         <Banner state={state} />
 
         <section className="card-surface space-y-4 p-5">
@@ -56,8 +90,8 @@ export function ProfileForm({ business }: { business: Business }) {
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Business name" htmlFor="name" error={state.errors?.name} required>
-              <Input name="name" defaultValue={business.name} required />
+            <Field label="Business name" htmlFor="name" error={clientErrors.name ?? state.errors?.name} required>
+              <Input name="name" defaultValue={business.name} required invalid={Boolean(clientErrors.name ?? state.errors?.name)} />
             </Field>
             <Field
               label="Legal name"
@@ -66,11 +100,20 @@ export function ProfileForm({ business }: { business: Business }) {
             >
               <Input name="legal_name" defaultValue={business.legal_name ?? ''} />
             </Field>
-            <Field label="Email" htmlFor="email" error={state.errors?.email}>
-              <Input name="email" type="email" defaultValue={business.email ?? ''} />
+            <Field label="Email" htmlFor="email" error={clientErrors.email ?? state.errors?.email}>
+              <Input
+                name="email"
+                type="email"
+                defaultValue={business.email ?? ''}
+                invalid={Boolean(clientErrors.email ?? state.errors?.email)}
+              />
             </Field>
-            <Field label="Phone" htmlFor="phone" error={state.errors?.phone}>
-              <Input name="phone" defaultValue={business.phone ?? ''} />
+            <Field label="Phone" htmlFor="phone" error={clientErrors.phone ?? state.errors?.phone}>
+              <Input
+                name="phone"
+                defaultValue={business.phone ?? ''}
+                invalid={Boolean(clientErrors.phone ?? state.errors?.phone)}
+              />
             </Field>
             <Field label="Website" htmlFor="website" className="sm:col-span-2">
               <Input name="website" defaultValue={business.website ?? ''} placeholder="https://" />
@@ -108,11 +151,21 @@ export function ProfileForm({ business }: { business: Business }) {
             With a GSTIN set, your invoices print as tax invoices with a per-rate tax breakup.
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="GSTIN" htmlFor="gstin" error={state.errors?.gstin}>
-              <Input name="gstin" defaultValue={business.gstin ?? ''} className="uppercase" />
+            <Field label="GSTIN" htmlFor="gstin" error={clientErrors.gstin ?? state.errors?.gstin}>
+              <Input
+                name="gstin"
+                defaultValue={business.gstin ?? ''}
+                className="uppercase"
+                invalid={Boolean(clientErrors.gstin ?? state.errors?.gstin)}
+              />
             </Field>
-            <Field label="PAN" htmlFor="pan" error={state.errors?.pan}>
-              <Input name="pan" defaultValue={business.pan ?? ''} className="uppercase" />
+            <Field label="PAN" htmlFor="pan" error={clientErrors.pan ?? state.errors?.pan}>
+              <Input
+                name="pan"
+                defaultValue={business.pan ?? ''}
+                className="uppercase"
+                invalid={Boolean(clientErrors.pan ?? state.errors?.pan)}
+              />
             </Field>
           </div>
         </section>
@@ -128,7 +181,14 @@ export function ProfileForm({ business }: { business: Business }) {
         </div>
       </form>
 
-      <form action={bankAction} className="mt-6 space-y-4" noValidate>
+      <form
+        action={bankAction}
+        onSubmit={(event) => {
+          if (!validateBank(new FormData(event.currentTarget))) event.preventDefault();
+        }}
+        className="mt-6 space-y-4"
+        noValidate
+      >
         <Banner state={bankState} />
 
         <section className="card-surface space-y-4 p-5">
@@ -147,8 +207,13 @@ export function ProfileForm({ business }: { business: Business }) {
             <Field label="Account number" htmlFor="bank_account_no">
               <Input name="bank_account_no" defaultValue={business.bank_account_no ?? ''} />
             </Field>
-            <Field label="IFSC" htmlFor="bank_ifsc" error={bankState.errors?.bank_ifsc}>
-              <Input name="bank_ifsc" defaultValue={business.bank_ifsc ?? ''} className="uppercase" />
+            <Field label="IFSC" htmlFor="bank_ifsc" error={bankClientErrors.bank_ifsc ?? bankState.errors?.bank_ifsc}>
+              <Input
+                name="bank_ifsc"
+                defaultValue={business.bank_ifsc ?? ''}
+                className="uppercase"
+                invalid={Boolean(bankClientErrors.bank_ifsc ?? bankState.errors?.bank_ifsc)}
+              />
             </Field>
             <Field label="UPI ID" htmlFor="upi_id" className="sm:col-span-2">
               <Input name="upi_id" defaultValue={business.upi_id ?? ''} placeholder="name@bank" />
@@ -168,9 +233,18 @@ export function ProfileForm({ business }: { business: Business }) {
 
 export function DefaultsForm({ business }: { business: Business }) {
   const [state, formAction, pending] = useActionState(saveDefaultsAction, initialState);
+  const { errors: clientErrors, validate } = useClientValidation(businessDefaultsSchema);
+  useActionToast(state);
 
   return (
-    <form action={formAction} className="space-y-6" noValidate>
+    <form
+      action={formAction}
+      onSubmit={(event) => {
+        if (!validate(new FormData(event.currentTarget))) event.preventDefault();
+      }}
+      className="space-y-6"
+      noValidate
+    >
       <Banner state={state} />
 
       <section className="card-surface space-y-4 p-5">
@@ -187,13 +261,14 @@ export function DefaultsForm({ business }: { business: Business }) {
           <Field label="Invoice prefix" htmlFor="invoice_prefix">
             <Input name="invoice_prefix" defaultValue={business.invoice_prefix} />
           </Field>
-          <Field label="Digits" htmlFor="number_padding" hint="4 gives QT-0001.">
+          <Field label="Digits" htmlFor="number_padding" hint="4 gives QT-0001." error={clientErrors.number_padding}>
             <Input
               name="number_padding"
               type="number"
               min={1}
               max={8}
               defaultValue={business.number_padding}
+              invalid={Boolean(clientErrors.number_padding)}
             />
           </Field>
         </div>
@@ -210,7 +285,7 @@ export function DefaultsForm({ business }: { business: Business }) {
           <Field label="Currency" htmlFor="currency" hint="Three-letter code.">
             <Input name="currency" defaultValue={business.currency} maxLength={3} className="uppercase" />
           </Field>
-          <Field label="Default tax rate %" htmlFor="default_tax_rate">
+          <Field label="Default tax rate %" htmlFor="default_tax_rate" error={clientErrors.default_tax_rate}>
             <Input
               name="default_tax_rate"
               type="number"
@@ -219,6 +294,7 @@ export function DefaultsForm({ business }: { business: Business }) {
               step="0.01"
               defaultValue={business.default_tax_rate}
               className="tabular"
+              invalid={Boolean(clientErrors.default_tax_rate)}
             />
           </Field>
           <Field label="Tax mode" htmlFor="default_tax_mode">
@@ -241,6 +317,7 @@ export function DefaultsForm({ business }: { business: Business }) {
             label="Quotations valid for (days)"
             htmlFor="quote_validity_days"
             hint="After this, the quotation expires automatically and can no longer be accepted."
+            error={clientErrors.quote_validity_days}
           >
             <Input
               name="quote_validity_days"
@@ -248,15 +325,17 @@ export function DefaultsForm({ business }: { business: Business }) {
               min={1}
               max={365}
               defaultValue={business.quote_validity_days}
+              invalid={Boolean(clientErrors.quote_validity_days)}
             />
           </Field>
-          <Field label="Invoices due in (days)" htmlFor="invoice_due_days">
+          <Field label="Invoices due in (days)" htmlFor="invoice_due_days" error={clientErrors.invoice_due_days}>
             <Input
               name="invoice_due_days"
               type="number"
               min={0}
               max={365}
               defaultValue={business.invoice_due_days}
+              invalid={Boolean(clientErrors.invoice_due_days)}
             />
           </Field>
         </div>
@@ -292,6 +371,7 @@ export function BrandingForm({
   allowedTemplates: string[];
 }) {
   const [state, formAction, pending] = useActionState(saveBrandingAction, initialState);
+  useActionToast(state);
 
   const templates = [
     { value: 'classic', label: 'Classic', description: 'Conservative letterhead. Prints cleanly in mono.' },
