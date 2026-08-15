@@ -80,7 +80,11 @@ export default function LandingPage() {
 function Hero() {
   return (
     <section className="hero-glow relative overflow-hidden border-b border-border">
-      <div className="container relative py-20 md:py-28">
+      {/* Asymmetric on purpose: the nav is only 64px and sits directly above,
+          so a symmetric py-28 left ~158px between it and the headline — a band
+          of empty page before anything to read. The bottom keeps its spacing,
+          which separates the hero from the mockup below it. */}
+      <div className="container relative pb-20 pt-10 md:pb-28 md:pt-14">
         <div className="mx-auto max-w-3xl text-center">
           <Badge
             variant="outline"
