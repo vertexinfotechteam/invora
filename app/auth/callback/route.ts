@@ -16,6 +16,17 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code');
   const next = safeRedirectPath(searchParams.get('next'));
 
+  // A provider that refused or was cancelled comes back with `error`, never a
+  // code. Forwarding its own reason keeps "you clicked Cancel on Google's
+  // consent screen" from being reported as a broken link.
+  const providerError = searchParams.get('error');
+  if (providerError) {
+    const params = new URLSearchParams({ error: providerError });
+    const description = searchParams.get('error_description');
+    if (description) params.set('error_description', description);
+    return NextResponse.redirect(`${origin}/login?${params.toString()}`);
+  }
+
   if (!code) {
     return NextResponse.redirect(`${origin}/login?error=missing_code`);
   }

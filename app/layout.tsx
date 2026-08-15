@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/components/theme-provider';
 import { cn } from '@/lib/utils';
 import './globals.css';
+import { appUrl as siteUrl } from '@/lib/app-url';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans', display: 'swap' });
 const fraunces = Fraunces({
@@ -18,7 +19,7 @@ const fraunces = Fraunces({
 // only falls back on null/undefined). `new URL('')` throws, and this runs at
 // module load for every route, so an empty value here took the whole build
 // down. `||` treats the empty string as falsy too, so it's covered either way.
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+const appUrl = siteUrl();
 
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),

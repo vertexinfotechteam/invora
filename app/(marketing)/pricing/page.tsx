@@ -20,7 +20,9 @@ interface Row {
 
 const ROWS: Row[] = [
   { label: 'Documents per month', free: '10', premium: '500' },
-  { label: 'AI credits per month', free: '15', premium: '500', note: '1 credit = 1 successful AI request' },
+  // 7, matching the plan cards below, the homepage, the support-chat prompt and
+  // the `free` row in 0007_seed_plans.sql. The comparison table said 15.
+  { label: 'AI credits per month', free: '7', premium: '500', note: '1 credit = 1 successful AI request' },
   { label: 'Customers & catalog items', free: 'Unlimited', premium: 'Unlimited' },
   { label: 'PDF templates', free: 'Classic', premium: 'Classic, Modern, Minimal' },
   { label: 'Invora branding on PDF', free: 'Shown', premium: 'Removed' },

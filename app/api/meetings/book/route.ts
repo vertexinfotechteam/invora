@@ -6,7 +6,7 @@ import { fieldErrors } from '@/lib/validation/common';
 import { bookDemoSchema } from '@/lib/validation/schemas';
 import { checkEmailDeliverable } from '@/lib/validation/email-address';
 import { computeAvailableSlots, SLOT_MINUTES } from '@/lib/meetings/availability';
-import { createMeetEvent, isCalendarConnected } from '@/lib/google/calendar';
+import { cancelMeetEvent, createMeetEvent, isCalendarConnected } from '@/lib/google/calendar';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { sendEmail } from '@/lib/email/send';
 import { demoBookingAdminNotificationEmail, demoBookingEmail } from '@/lib/email/templates';
@@ -61,19 +61,29 @@ export const POST = withApiErrors(async (request: NextRequest) => {
   // created later, by hand, when there is no calendar to create it now.
   const { connected } = await isCalendarConnected();
 
-  const meeting = connected
-    ? await createMeetEvent({
+  // The same reasoning applies to a calendar that is connected but *failing* —
+  // an expired refresh token, a revoked grant, a Google quota error. Letting
+  // that throw took the whole booking down: no row, no emails, a 500 for the
+  // visitor. The lead is worth more than the invite, so the event is
+  // best-effort and the booking continues without it.
+  let meeting = null;
+  if (connected) {
+    try {
+      meeting = await createMeetEvent({
         summary: `Invora demo — ${input.name}${input.company ? ` (${input.company})` : ''}`,
         description: input.notes || 'Booked via the Invora website.',
         startIso: input.startIso,
         endIso,
         attendeeEmail: input.email,
         attendeeName: input.name,
-      })
-    : null;
+      });
+    } catch (error) {
+      console.error('[invora:meetings] Meet event creation failed (booking continues)', error);
+    }
+  }
 
   const admin = createSupabaseAdminClient();
-  await admin.from('demo_bookings').insert({
+  const { error: insertError } = await admin.from('demo_bookings').insert({
     visitor_name: input.name,
     visitor_email: input.email,
     company: input.company ?? null,
@@ -84,6 +94,16 @@ export const POST = withApiErrors(async (request: NextRequest) => {
     meet_link: meeting?.meetLink ?? null,
     status: 'confirmed',
   });
+
+  // Previously ignored, so a failed insert still told the visitor "You're
+  // booked" and sent both emails for a demo that existed nowhere. If a calendar
+  // event was already created, take it back down rather than leave an invite
+  // for a booking with no row behind it.
+  if (insertError) {
+    console.error('[invora:meetings] booking insert failed', insertError);
+    if (meeting?.eventId) await cancelMeetEvent(meeting.eventId);
+    throw new Error('Could not save that booking.');
+  }
 
   const whenFormatted = new Intl.DateTimeFormat('en-IN', {
     weekday: 'long',

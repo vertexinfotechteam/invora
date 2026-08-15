@@ -9,6 +9,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { recordDocumentEvent } from '@/lib/events';
 import { sendEmail } from '@/lib/email/send';
 import { quoteDecisionEmail } from '@/lib/email/templates';
+import { appUrl as siteUrl } from '@/lib/app-url';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -100,7 +101,7 @@ export const POST = withApiErrors(async (request: NextRequest) => {
     : { data: null };
 
   if (business?.email) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = siteUrl();
     const mail = quoteDecisionEmail({
       businessName: business.name || 'Your business',
       brandColor: business.brand_color || '#4F46E5',

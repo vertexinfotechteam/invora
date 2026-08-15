@@ -2,6 +2,7 @@ import 'server-only';
 
 import { google } from 'googleapis';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
+import { appUrl } from '@/lib/app-url';
 
 /**
  * SERVER ONLY. Google Calendar access for the "book a demo" feature.
@@ -21,13 +22,14 @@ const SCOPES = ['https://www.googleapis.com/auth/calendar.events'];
 function getOAuthClient() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
 
-  if (!clientId || !clientSecret || !appUrl) {
-    throw new Error('GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and NEXT_PUBLIC_APP_URL must be configured.');
+  // The origin is always resolvable now (lib/app-url.ts falls back to the
+  // Vercel-provided domain), so only the two Google credentials can be missing.
+  if (!clientId || !clientSecret) {
+    throw new Error('GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be configured.');
   }
 
-  return new google.auth.OAuth2(clientId, clientSecret, `${appUrl.replace(/\/$/, '')}/api/admin/calendar/callback`);
+  return new google.auth.OAuth2(clientId, clientSecret, `${appUrl()}/api/admin/calendar/callback`);
 }
 
 /** Step 1 of the connect flow: where /api/admin/calendar/connect redirects to. */

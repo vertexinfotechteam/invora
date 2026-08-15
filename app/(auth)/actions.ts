@@ -3,7 +3,8 @@
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { enforceRateLimit, limiters } from '@/lib/guards/rate-limit';
+import { enforceRateLimit } from '@/lib/guards/rate-limit';
+import { appUrl } from '@/lib/app-url';
 import { fieldErrors, safeRedirectPath } from '@/lib/validation/common';
 import { checkEmailDeliverable } from '@/lib/validation/email-address';
 import { sendEmail } from '@/lib/email/send';
@@ -24,26 +25,20 @@ export interface FormState {
 /**
  * Base URL for links we email out (verification, password reset).
  *
- * The `Host` header is caller-controlled, so trusting it in production would let
- * an attacker trigger a reset for someone else's address and have the link point
- * at a host they own. Only the dev fallback may use it.
+ * See lib/app-url.ts for the resolution order. It never consults the `Host`
+ * header, which is caller-controlled and would otherwise let an attacker
+ * trigger a reset for someone else's address and have the link point at a host
+ * they own. It also no longer throws when nothing is configured: doing so
+ * aborted the server action before `supabase.auth.signUp` ever ran, so an
+ * unset `NEXT_PUBLIC_APP_URL` turned both password and OAuth sign-up into
+ * "Something broke on our side" rather than into a wrong link.
  */
-async function originUrl(): Promise<string> {
-  const configured = process.env.NEXT_PUBLIC_APP_URL;
-  if (configured) return configured.replace(/\/$/, '');
-
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('NEXT_PUBLIC_APP_URL must be set in production to build email links.');
-  }
-
-  const host = (await headers()).get('host') ?? 'localhost:3000';
-  const protocol = host.startsWith('localhost') ? 'http' : 'https';
-  return `${protocol}://${host}`;
+function originUrl(): string {
+  return appUrl();
 }
 
 /** Auth endpoints are limited by IP — there is no user id to key on yet. */
 async function limitByIp(prefix: string): Promise<void> {
-  if (!limiters.auth) return;
   const forwarded = (await headers()).get('x-forwarded-for') ?? 'unknown';
   const ip = forwarded.split(',')[0]?.trim() ?? 'unknown';
   await enforceRateLimit('auth', `${prefix}:${ip}`);
@@ -82,7 +77,7 @@ export async function signUpAction(_prev: FormState, formData: FormData): Promis
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      emailRedirectTo: `${await originUrl()}/auth/callback?next=/settings/profile`,
+      emailRedirectTo: `${originUrl()}/auth/callback?next=/settings/profile`,
       // Read by the handle_new_user trigger to seed the business row.
       data: {
         full_name: parsed.data.fullName,
@@ -102,7 +97,7 @@ export async function signUpAction(_prev: FormState, formData: FormData): Promis
   const mail = welcomeEmail({
     name: parsed.data.fullName,
     businessName: parsed.data.businessName,
-    appUrl: await originUrl(),
+    appUrl: originUrl(),
   });
   await sendEmail({
     to: parsed.data.email,
@@ -177,7 +172,7 @@ export async function forgotPasswordAction(
 
   const supabase = await createSupabaseServerClient();
   await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${await originUrl()}/auth/callback?next=/reset-password`,
+    redirectTo: `${originUrl()}/auth/callback?next=/reset-password`,
   });
 
   // Always the same answer, whether or not the address exists.

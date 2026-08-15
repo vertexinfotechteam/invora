@@ -7,9 +7,21 @@ import { rateLimited } from '@/lib/guards/errors';
 /**
  * Serverless-safe sliding-window limiters.
  *
- * If Upstash is not configured we fail *open* in development (so `npm run dev`
- * works with an empty .env.local) and *closed* in production, because an
- * unmetered AI endpoint is a billing incident waiting to happen.
+ * Upstash is the real limiter: shared across instances, so a budget means the
+ * same thing no matter which lambda answers. When it is not configured we fall
+ * back to an in-process sliding window (see `memoryLimit`) rather than failing
+ * open or closed.
+ *
+ * Failing *closed* is what this used to do in production, on the reasoning that
+ * an unmetered AI endpoint is a billing incident waiting to happen. That is
+ * true, but the cost was far worse than the risk: with no Redis configured,
+ * every limited route — demo booking, availability, contact, support chat,
+ * PDF/Excel download, sending documents, quote accept/decline, share links,
+ * payments, CSV import, all in-app AI — returned 429 on its first request, so
+ * essentially the whole product was down. The in-memory fallback still meters
+ * (per instance, so the effective ceiling is the budget times the number of
+ * warm lambdas) and AI additionally has the per-business credit backstop, which
+ * is the limit that actually bounds spend.
  */
 const hasRedis = Boolean(
   process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN,
@@ -17,34 +29,73 @@ const hasRedis = Boolean(
 
 const redis = hasRedis ? Redis.fromEnv() : null;
 
-function build(tokens: number, window: Parameters<typeof Ratelimit.slidingWindow>[1], prefix: string) {
+const MINUTE = 60_000;
+
+/** One budget per limiter: `tokens` requests per `windowMs`, keyed under `prefix`. */
+const budgets = {
+  ai: { tokens: 10, windowMs: MINUTE, prefix: 'ai' },
+  auth: { tokens: 10, windowMs: MINUTE, prefix: 'auth' },
+  pdf: { tokens: 30, windowMs: MINUTE, prefix: 'pdf' },
+  share: { tokens: 60, windowMs: MINUTE, prefix: 'share' },
+  publicView: { tokens: 120, windowMs: MINUTE, prefix: 'public' },
+  webhook: { tokens: 300, windowMs: MINUTE, prefix: 'webhook' },
+  email: { tokens: 20, windowMs: MINUTE, prefix: 'email' },
+  contact: { tokens: 5, windowMs: 10 * MINUTE, prefix: 'contact' },
+  write: { tokens: 60, windowMs: MINUTE, prefix: 'write' },
+  // CSV import accepts up to 5,000 rows a call, so it gets its own tight budget.
+  bulk: { tokens: 5, windowMs: MINUTE, prefix: 'bulk' },
+  // Unauthenticated + costs real API spend per request — kept tight and,
+  // unlike the in-app `ai` limiter, has no per-business credit backstop.
+  publicChat: { tokens: 8, windowMs: 5 * MINUTE, prefix: 'public-chat' },
+} as const;
+
+export type LimiterName = keyof typeof budgets;
+
+function build(name: LimiterName) {
   if (!redis) return null;
+  const { tokens, windowMs, prefix } = budgets[name];
   return new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(tokens, window),
+    limiter: Ratelimit.slidingWindow(tokens, `${windowMs} ms`),
     analytics: true,
     prefix: `invora:${prefix}`,
   });
 }
 
-export const limiters = {
-  ai: build(10, '60 s', 'ai'),
-  auth: build(10, '60 s', 'auth'),
-  pdf: build(30, '60 s', 'pdf'),
-  share: build(60, '60 s', 'share'),
-  publicView: build(120, '60 s', 'public'),
-  webhook: build(300, '60 s', 'webhook'),
-  email: build(20, '60 s', 'email'),
-  contact: build(5, '10 m', 'contact'),
-  write: build(60, '60 s', 'write'),
-  // CSV import accepts up to 5,000 rows a call, so it gets its own tight budget.
-  bulk: build(5, '60 s', 'bulk'),
-  // Unauthenticated + costs real API spend per request — kept tight and,
-  // unlike the in-app `ai` limiter, has no per-business credit backstop.
-  publicChat: build(8, '5 m', 'public-chat'),
-} as const;
+export const limiters = Object.fromEntries(
+  (Object.keys(budgets) as LimiterName[]).map((name) => [name, build(name)]),
+) as Record<LimiterName, Ratelimit | null>;
 
-export type LimiterName = keyof typeof limiters;
+/**
+ * Hit timestamps per key, newest last. Only consulted when Redis is absent.
+ *
+ * A lambda that stays warm accumulates keys, so each check prunes its own key
+ * and the map is cleared wholesale once it grows past `MAX_KEYS` — a blunt
+ * eviction, but this is a fallback whose worst case is briefly forgetting some
+ * counts, and it is bounded memory rather than a leak.
+ */
+const MAX_KEYS = 10_000;
+const hits = new Map<string, number[]>();
+
+function memoryLimit(name: LimiterName, key: string): { success: boolean; reset: number } {
+  const { tokens, windowMs } = budgets[name];
+  const now = Date.now();
+  const cutoff = now - windowMs;
+
+  if (hits.size > MAX_KEYS) hits.clear();
+
+  const recent = (hits.get(key) ?? []).filter((at) => at > cutoff);
+
+  if (recent.length >= tokens) {
+    hits.set(key, recent);
+    // Oldest hit in the window is the one whose expiry frees a slot.
+    return { success: false, reset: (recent[0] ?? now) + windowMs };
+  }
+
+  recent.push(now);
+  hits.set(key, recent);
+  return { success: true, reset: now + windowMs };
+}
 
 /**
  * Throws a 429 when the identifier has spent its window.
@@ -52,15 +103,12 @@ export type LimiterName = keyof typeof limiters;
  */
 export async function enforceRateLimit(name: LimiterName, identifier: string): Promise<void> {
   const limiter = limiters[name];
+  const key = `${budgets[name].prefix}:${identifier}`;
 
-  if (!limiter) {
-    if (process.env.NODE_ENV === 'production') {
-      throw rateLimited(60);
-    }
-    return; // dev convenience only
-  }
+  const { success, reset } = limiter
+    ? await limiter.limit(identifier)
+    : memoryLimit(name, key);
 
-  const { success, reset } = await limiter.limit(identifier);
   if (!success) {
     const retryAfterSeconds = Math.max(1, Math.ceil((reset - Date.now()) / 1000));
     throw rateLimited(retryAfterSeconds);

@@ -7,6 +7,7 @@ import { signInAction, type FormState } from '../actions';
 import { Button } from '@/components/ui/button';
 import { Input, PasswordInput } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
+import { OAuthButtons } from '@/app/(auth)/oauth-buttons';
 
 const initialState: FormState = { ok: false };
 
@@ -15,6 +16,14 @@ export function LoginForm({ next }: { next?: string }) {
 
   return (
     <div className="space-y-5">
+      <OAuthButtons next={next} />
+
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs text-muted-foreground">or sign in with email</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+
       <form action={formAction} className="space-y-4" noValidate>
       <input type="hidden" name="next" value={next ?? '/dashboard'} />
 

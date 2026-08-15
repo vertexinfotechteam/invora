@@ -130,6 +130,10 @@ export function BookDemoFlow() {
 
   const [slots, setSlots] = React.useState<Slot[] | null>(null);
   const [loadingSlots, setLoadingSlots] = React.useState(true);
+  const [slotsError, setSlotsError] = React.useState<string | null>(null);
+  // Bumped by "Try again". Re-setting selectedDate to the same value would not
+  // re-run the effect, since React bails out on an Object.is-equal update.
+  const [slotsRetry, setSlotsRetry] = React.useState(0);
   const [selectedSlot, setSelectedSlot] = React.useState<Slot | null>(null);
 
   const [name, setName] = React.useState('');
@@ -160,13 +164,32 @@ export function BookDemoFlow() {
     setLoadingSlots(true);
     setSelectedSlot(null);
 
+    setSlotsError(null);
+
+    // A failed request and a genuinely empty day are different things. Treating
+    // both as "no slots" is what made a rate-limited or erroring availability
+    // API look like a permanently fully-booked calendar on every single date.
     fetch(`/api/meetings/availability?date=${selectedDate}`)
-      .then((response) => response.json())
-      .then((payload) => {
-        if (!cancelled) setSlots(payload.slots ?? []);
+      .then(async (response) => {
+        const payload = await response.json().catch(() => null);
+        if (cancelled) return;
+
+        if (!response.ok) {
+          setSlots([]);
+          setSlotsError(
+            response.status === 429
+              ? 'Too many requests just now. Wait a few seconds and pick the date again.'
+              : (payload?.error?.message ?? 'We could not load availability for that day.'),
+          );
+          return;
+        }
+
+        setSlots(payload?.slots ?? []);
       })
       .catch(() => {
-        if (!cancelled) setSlots([]);
+        if (cancelled) return;
+        setSlots([]);
+        setSlotsError('We could not reach the server. Check your connection and try again.');
       })
       .finally(() => {
         if (!cancelled) setLoadingSlots(false);
@@ -175,7 +198,7 @@ export function BookDemoFlow() {
     return () => {
       cancelled = true;
     };
-  }, [selectedDate]);
+  }, [selectedDate, slotsRetry]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -347,6 +370,20 @@ export function BookDemoFlow() {
                 </div>
               </div>
             ))}
+          </div>
+        ) : slotsError ? (
+          <div
+            role="alert"
+            className="space-y-2 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+          >
+            <p>{slotsError}</p>
+            <button
+              type="button"
+              onClick={() => setSlotsRetry((n) => n + 1)}
+              className="font-medium underline underline-offset-4"
+            >
+              Try again
+            </button>
           </div>
         ) : (
           <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">

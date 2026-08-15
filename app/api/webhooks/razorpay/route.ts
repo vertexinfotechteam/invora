@@ -9,6 +9,7 @@ import { receiptEmail } from '@/lib/email/templates';
 import { formatPaise } from '@/lib/money';
 import { formatDate } from '@/lib/utils';
 import type { SubscriptionStatus } from '@/lib/types/database';
+import { appUrl as siteUrl } from '@/lib/app-url';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -235,7 +236,7 @@ async function handlePaymentCaptured(event: RazorpayEvent) {
   ]);
 
   if (customer?.email) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = siteUrl();
     const mail = receiptEmail({
       businessName: business?.name || 'Your supplier',
       brandColor: business?.brand_color || '#16a34a',
