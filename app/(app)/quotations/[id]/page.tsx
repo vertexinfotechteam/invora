@@ -5,13 +5,11 @@ import { Copy, FileOutput, Share2, Trash2 } from 'lucide-react';
 
 import { requireBusiness } from '@/lib/guards/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { listDocumentEvents } from '@/lib/events';
 import { PageHeader } from '@/components/app/page-header';
 import { Button } from '@/components/ui/button';
 import { SubmitButton } from '@/components/ui/submit-button';
 import { StatusBadge } from '@/components/ui/badge';
 import { DocumentEditor } from '@/components/documents/document-editor';
-import { DocumentTimeline } from '@/components/documents/timeline';
 import { DownloadMenu } from '@/components/documents/download-menu';
 import { ShareDialog } from '@/components/documents/share-dialog';
 import { SendDialog } from '@/components/documents/send-dialog';
@@ -40,7 +38,6 @@ export default async function QuotationPage({ params }: { params: Promise<{ id: 
     .filter((check) => !check.done)
     .map((check) => check.label);
 
-  const events = await listDocumentEvents('quotation', id);
   const customer = quote.customers as unknown as { name?: string; company?: string; email?: string } | null;
 
   // Accepted / declined / expired quotations are historical records — the
@@ -136,7 +133,6 @@ export default async function QuotationPage({ params }: { params: Promise<{ id: 
             </div>
           ) : null}
 
-          <DocumentTimeline events={events} />
         </aside>
       </div>
     </>
