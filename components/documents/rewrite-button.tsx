@@ -92,6 +92,16 @@ export function RewriteButton({
         type="button"
         onClick={() => setOpen(true)}
         disabled={disabled}
+        // Without this, an empty field renders a greyed-out button with no
+        // explanation, which reads as "the feature is broken" rather than
+        // "there is nothing here to rewrite yet" — the most common complaint
+        // about this control. `title` also reaches screen readers, which the
+        // dimmed styling alone does not.
+        title={
+          disabled
+            ? 'Add some text to this field first — there is nothing to rewrite or translate yet.'
+            : 'Rewrite or translate this text'
+        }
         className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
       >
         <Wand2 className="h-3 w-3" />
