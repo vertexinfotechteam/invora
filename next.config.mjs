@@ -26,6 +26,12 @@ const csp = [
 ].join('; ');
 
 const nextConfig = {
+  // `next build` and `next dev` both own `.next`, so a production build run
+  // while a dev server is up corrupts both — the build fails collecting page
+  // data with a bogus "Cannot find module for page: /_document". Setting
+  // NEXT_DIST_DIR gives a build its own output directory. Unset everywhere
+  // else, including on Vercel, so the default is unchanged.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   reactStrictMode: true,
   poweredByHeader: false,
   // @react-pdf/renderer must stay a real Node dependency inside route handlers.

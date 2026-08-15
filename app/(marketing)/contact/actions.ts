@@ -7,6 +7,7 @@ import { contactSchema } from '@/lib/validation/schemas';
 import { checkEmailDeliverable } from '@/lib/validation/email-address';
 import { sendEmail } from '@/lib/email/send';
 import { contactFormEmail } from '@/lib/email/templates';
+import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 
 export interface FormState {
   ok: boolean;
@@ -67,10 +68,31 @@ export async function submitContactAction(_prev: FormState, formData: FormData):
     template: 'contact_form',
   });
 
-  // "Not configured" is expected in local dev (logged to the console instead)
-  // and still counts as success from the visitor's point of view. An actual
-  // provider failure should tell them to try another way to reach us.
-  if (!result.sent && result.error !== 'email_not_configured') {
+  // Stored regardless of what email did. Email is not an inbox we control: the
+  // address may not exist, the provider may be down, or SMTP may not be
+  // configured at all. Previously that meant the message existed nowhere, and
+  // the visitor was told it had been sent. Now /admin/messages always has it.
+  //
+  // Written with the service-role client because contact_messages denies anon
+  // and authenticated outright — the submitter is neither, and must not be able
+  // to read the inbox back.
+  const admin = createSupabaseAdminClient();
+  const { error: storeError } = await admin.from('contact_messages').insert({
+    name: parsed.data.name,
+    email: parsed.data.email,
+    message: parsed.data.message,
+    email_sent: result.sent,
+    client_ip: await clientIp(),
+  });
+
+  if (storeError) {
+    console.error('[invora:contact] could not store message', storeError);
+  }
+
+  // Only a total loss is reported as failure: the message reached neither the
+  // inbox nor the database, so telling the visitor it arrived would be a lie.
+  // If either one worked, it is recoverable and they should not retype it.
+  if (!result.sent && storeError) {
     return {
       ok: false,
       message: 'Could not send your message. Please try again, or email us directly.',

@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
+import { after } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { enforceRateLimit } from '@/lib/guards/rate-limit';
 import { appUrl } from '@/lib/app-url';
@@ -90,21 +91,32 @@ export async function signUpAction(_prev: FormState, formData: FormData): Promis
     return { ok: false, message: error.message };
   }
 
-  // Greeting mail, sent once at sign-up. Deliberately not awaited into the
-  // failure path: a mail provider having a bad minute must never turn a
-  // successful sign-up into an error the visitor sees. sendEmail already
-  // swallows and logs its own failures.
-  const mail = welcomeEmail({
-    name: parsed.data.fullName,
-    businessName: parsed.data.businessName,
-    appUrl: originUrl(),
-  });
-  await sendEmail({
-    to: parsed.data.email,
-    subject: mail.subject,
-    html: mail.html,
-    text: mail.text,
-    template: 'welcome',
+  // Greeting mail, sent once at sign-up — after the response, never before it.
+  //
+  // This used to be awaited inline. An SMTP handshake to Gmail takes ~6s, and
+  // together with the MX check above it pushed the whole action past 20s. That
+  // is fatal on a serverless host: Vercel's default function timeout is 10s, so
+  // the request 504'd and the visitor saw "something broke" even though the
+  // account had in fact been created — the worst possible outcome, since
+  // retrying then fails on "email already registered".
+  //
+  // after() runs the callback once the response has been flushed, so the
+  // redirect to /dashboard is immediate and a slow mail provider can no longer
+  // fail a sign-up that already succeeded. sendEmail swallows and logs its own
+  // errors, so nothing here can reject.
+  after(async () => {
+    const mail = welcomeEmail({
+      name: parsed.data.fullName,
+      businessName: parsed.data.businessName,
+      appUrl: originUrl(),
+    });
+    await sendEmail({
+      to: parsed.data.email,
+      subject: mail.subject,
+      html: mail.html,
+      text: mail.text,
+      template: 'welcome',
+    });
   });
 
   // If email confirmation is off for this project, Supabase signs the user in

@@ -75,8 +75,70 @@ export const tableStyles = StyleSheet.create({
   cAmount: { width: '15%', textAlign: 'right' },
 });
 
+/**
+ * Currency symbols the PDF's base-14 fonts cannot encode, and what to print
+ * instead.
+ *
+ * The PDF uses Helvetica, one of the 14 standard fonts, which are limited to
+ * WinAnsi encoding. `₹` is U+20B9; WinAnsi has no such glyph, so the encoder
+ * truncates the code point to its low byte, 0xB9 — which is `¹`. That is why
+ * every rupee amount in a downloaded PDF read "¹1,20,000.00".
+ *
+ * Printing "Rs." keeps the PDF readable with no bundled font. Rendering the
+ * real ₹ (or any Devanagari/Gujarati text) needs a Unicode TTF registered with
+ * Font.register — see the note in docs/ if that becomes a requirement.
+ */
+const PDF_UNPRINTABLE_CURRENCY: Record<string, string> = { INR: 'Rs.' };
+
+/**
+ * Characters outside WinAnsi that we emit deliberately, and their ASCII stand-ins.
+ * U+2212 (the real minus sign) is used on the Discount and Paid rows; it has no
+ * WinAnsi slot either, so it corrupted exactly the way `₹` did.
+ */
+const ASCII_SUBSTITUTES: Record<string, string> = {
+  '₹': 'Rs.', // ₹
+  '−': '-', // minus sign
+  '–': '-', // en dash
+  '—': '-', // em dash
+  '‘': "'",
+  '’': "'",
+  '“': '"',
+  '”': '"',
+  '…': '...',
+  ' ': ' ',
+};
+
+/**
+ * Makes a string safe for the base-14 fonts, which can only encode code points
+ * present in WinAnsi (roughly Latin-1). Anything above U+00FF is truncated to
+ * its low byte by the encoder rather than dropped — which is why `₹` (U+20B9)
+ * printed as `¹` (0xB9) instead of simply going missing.
+ *
+ * Substitutes what we can and drops the rest, so a stray character can never
+ * silently corrupt a money figure on a document a customer receives.
+ */
+export function pdfSafe(text: string): string {
+  let out = '';
+  for (const char of text) {
+    const code = char.codePointAt(0) ?? 0;
+    if (code <= 0xff) out += char;
+    else out += ASCII_SUBSTITUTES[char] ?? '';
+  }
+  return out;
+}
+
 export function money(paise: number, data: PdfDocumentData): string {
-  return formatPaise(paise, data.currency, data.locale);
+  // Normalised because `currency` is char(3) and nothing upstream guarantees
+  // its case; a stored "inr" missed the lookup and fell through to the symbol.
+  const fallback = PDF_UNPRINTABLE_CURRENCY[(data.currency ?? '').trim().toUpperCase()];
+
+  if (fallback) {
+    const amount = formatPaise(paise, data.currency, data.locale, { withSymbol: false });
+    return `${fallback} ${amount}`;
+  }
+
+  // Any other currency: whatever Intl produced still has to survive the encoder.
+  return pdfSafe(formatPaise(paise, data.currency, data.locale));
 }
 
 export function PartyBlock({ label, party }: { label: string; party: PdfParty | null }) {
@@ -149,7 +211,7 @@ export function TotalsBlock({ data, accent }: { data: PdfDocumentData; accent: s
 
   if (data.discountPaise > 0) {
     const suffix = data.docDiscountPct > 0 ? ` (${formatPercent(data.docDiscountPct)})` : '';
-    rows.push({ label: `Discount${suffix}`, value: `− ${money(data.discountPaise, data)}` });
+    rows.push({ label: `Discount${suffix}`, value: `- ${money(data.discountPaise, data)}` });
   }
 
   for (const bucket of data.taxBreakup) {
@@ -194,7 +256,7 @@ export function TotalsBlock({ data, accent }: { data: PdfDocumentData; accent: s
         <>
           <View style={[base.spread, { paddingVertical: 2.5, marginTop: 4 }]}>
             <Text style={base.muted}>Amount paid</Text>
-            <Text>− {money(data.amountPaidPaise, data)}</Text>
+            <Text>- {money(data.amountPaidPaise, data)}</Text>
           </View>
           <View style={[base.spread, { paddingVertical: 2.5 }]}>
             <Text style={base.bold}>Balance due</Text>
