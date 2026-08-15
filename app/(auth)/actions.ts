@@ -6,7 +6,6 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { enforceRateLimit, limiters } from '@/lib/guards/rate-limit';
 import { fieldErrors, safeRedirectPath } from '@/lib/validation/common';
 import { checkEmailDeliverable } from '@/lib/validation/email-address';
-import { setFlashToast } from '@/lib/flash';
 import { sendEmail } from '@/lib/email/send';
 import { welcomeEmail } from '@/lib/email/templates';
 import {
@@ -118,7 +117,6 @@ export async function signUpAction(_prev: FormState, formData: FormData): Promis
   // confirmation is required, there is no session yet and we fall through to
   // the "check your email" message below.
   if (data.session) {
-    await setFlashToast('success', `Welcome to Invora, ${parsed.data.fullName}!`);
     redirect('/dashboard');
   }
 
@@ -153,14 +151,12 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
     return { ok: false, message: 'That email and password combination did not work.' };
   }
 
-  await setFlashToast('success', 'Welcome back!');
   redirect(safeRedirectPath(formData.get('next')));
 }
 
 export async function signOutAction(): Promise<void> {
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
-  await setFlashToast('info', 'You have been signed out.');
   redirect('/');
 }
 
@@ -216,6 +212,5 @@ export async function resetPasswordAction(
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) return { ok: false, message: error.message };
 
-  await setFlashToast('success', 'Password updated.');
   redirect('/dashboard');
 }

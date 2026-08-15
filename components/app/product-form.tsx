@@ -3,15 +3,12 @@
 import * as React from 'react';
 import { useActionState } from 'react';
 import { AlertCircle } from 'lucide-react';
-import { toast } from 'sonner';
 
 import { saveProductAction, type ActionState } from '@/app/(app)/actions';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
 import { parseAmountToPaise } from '@/lib/money';
-import { useClientValidation } from '@/hooks/use-client-validation';
-import { productSchema } from '@/lib/validation/yup-schemas';
 import type { Product } from '@/lib/types/database';
 
 const initialState: ActionState = { ok: false };
@@ -20,14 +17,6 @@ const TAX_PRESETS = [0, 5, 12, 18, 28];
 export function ProductForm({ product }: { product?: Product }) {
   const action = saveProductAction.bind(null, product?.id ?? null);
   const [state, formAction, pending] = useActionState(action, initialState);
-  const { errors: clientErrors, validate } = useClientValidation(productSchema);
-
-  // Success shows via a flash toast on /products — saveProductAction
-  // redirects on success, unmounting this component.
-  React.useEffect(() => {
-    if (state === initialState) return;
-    if (!state.ok && state.message) toast.error(state.message);
-  }, [state]);
 
   // The visible field is rupees; the hidden field carries integer paise, which
   // is the only representation the server accepts.
@@ -37,14 +26,7 @@ export function ProductForm({ product }: { product?: Product }) {
   const paise = parseAmountToPaise(rupees) ?? 0;
 
   return (
-    <form
-      action={formAction}
-      onSubmit={(event) => {
-        if (!validate(new FormData(event.currentTarget))) event.preventDefault();
-      }}
-      className="space-y-6"
-      noValidate
-    >
+    <form action={formAction} className="space-y-6" noValidate>
       {state.message ? (
         <div
           role="alert"
@@ -56,13 +38,13 @@ export function ProductForm({ product }: { product?: Product }) {
       ) : null}
 
       <section className="card-surface space-y-4 p-5">
-        <Field label="Name" htmlFor="name" error={clientErrors.name ?? state.errors?.name} required>
+        <Field label="Name" htmlFor="name" error={state.errors?.name} required>
           <Input
             name="name"
             defaultValue={product?.name}
             placeholder="UI design — per screen"
             required
-            invalid={Boolean(clientErrors.name ?? state.errors?.name)}
+            invalid={Boolean(state.errors?.name)}
           />
         </Field>
 
@@ -75,14 +57,8 @@ export function ProductForm({ product }: { product?: Product }) {
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label="Unit"
-            htmlFor="unit"
-            hint="hour, day, screen, licence, project…"
-            error={clientErrors.unit}
-            required
-          >
-            <Input name="unit" defaultValue={product?.unit ?? 'unit'} required invalid={Boolean(clientErrors.unit)} />
+          <Field label="Unit" htmlFor="unit" hint="hour, day, screen, licence, project…" required>
+            <Input name="unit" defaultValue={product?.unit ?? 'unit'} required />
           </Field>
 
           <Field label="SKU or code" htmlFor="sku">
@@ -93,7 +69,6 @@ export function ProductForm({ product }: { product?: Product }) {
             label="Default rate"
             htmlFor="price"
             hint="In rupees. Stored internally as whole paise."
-            error={clientErrors.default_price_paise ?? state.errors?.default_price_paise}
           >
             <Input
               id="price"

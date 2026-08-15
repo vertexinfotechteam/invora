@@ -17,8 +17,6 @@ import { formatPaise, formatPercent } from '@/lib/money';
 import { amountInWordsIndian } from '@/lib/money';
 import { debounce } from '@/lib/utils';
 import { saveDocumentAction } from '@/app/(app)/actions';
-import { documentTopLevelSchema, validateDocumentLines } from '@/lib/validation/yup-schemas';
-import * as yup from 'yup';
 import {
   emptyLine,
   toPayload,
@@ -81,45 +79,6 @@ export function DocumentEditor({
   const save = React.useCallback(
     async (silent: boolean) => {
       if (readOnly) return;
-
-      // Checked here only for the explicit Save click, not silent autosave —
-      // interrupting autosave with a toast every couple of seconds while
-      // someone is mid-edit (e.g. the date field is briefly empty between
-      // keystrokes) would be worse than just letting autosave quietly skip
-      // and the explicit Save surface the real problem. Server-side Zod
-      // validation still runs on every save either way; this only saves an
-      // avoidable round trip on the common failure (no line items yet, a
-      // malformed date) for someone who clicked Save on purpose.
-      if (!silent) {
-        try {
-          documentTopLevelSchema.validateSync(
-            { title: state.title, issue_date: state.issue_date },
-            { abortEarly: false },
-          );
-        } catch (validationError) {
-          if (validationError instanceof yup.ValidationError) {
-            const fieldErrors: Record<string, string> = {};
-            for (const issue of validationError.inner.length ? validationError.inner : [validationError]) {
-              const key = issue.path ?? '_form';
-              if (!fieldErrors[key]) fieldErrors[key] = issue.message;
-            }
-            setErrors(fieldErrors);
-            setStatus('error');
-            toast.error(Object.values(fieldErrors)[0] ?? 'Please fix the highlighted fields.');
-            return;
-          }
-        }
-
-        const lineError = validateDocumentLines(
-          state.items.map((line) => ({ name: line.name, qty: line.qty, rate_paise: line.rate_paise })),
-        );
-        if (lineError) {
-          setStatus('error');
-          toast.error(lineError);
-          return;
-        }
-      }
-
       setStatus('saving');
 
       const result = await saveDocumentAction(docType, docId, toPayload(state, docType));

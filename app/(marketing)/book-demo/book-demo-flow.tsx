@@ -3,14 +3,11 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock, Globe, Loader2, Mail } from 'lucide-react';
-import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
 import { Field } from '@/components/ui/field';
 import { Reveal } from '@/components/marketing/reveal';
-import { useClientValidation } from '@/hooks/use-client-validation';
-import { bookDemoSchema } from '@/lib/validation/yup-schemas';
 
 interface Slot {
   startIso: string;
@@ -143,7 +140,6 @@ export function BookDemoFlow() {
   const [error, setError] = React.useState<string | null>(null);
   const [confirmed, setConfirmed] = React.useState<{ whenFormatted: string; inviteSent: boolean } | null>(null);
   const honeypotRef = React.useRef<HTMLInputElement>(null);
-  const { errors: clientErrors, validate } = useClientValidation(bookDemoSchema);
 
   const slotGroups = React.useMemo(() => groupSlotsByPeriod(slots ?? [], timezone), [slots, timezone]);
 
@@ -184,7 +180,6 @@ export function BookDemoFlow() {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!selectedSlot) return;
-    if (!validate({ name, email, company, notes })) return;
 
     setSubmitting(true);
     setError(null);
@@ -205,18 +200,13 @@ export function BookDemoFlow() {
       const payload = await response.json();
 
       if (!response.ok) {
-        const message = payload?.error?.message ?? 'Could not book that slot.';
-        setError(message);
-        toast.error(message);
+        setError(payload?.error?.message ?? 'Could not book that slot.');
         return;
       }
 
       setConfirmed({ whenFormatted: payload.whenFormatted, inviteSent: Boolean(payload.inviteSent) });
-      toast.success('Demo booked!');
     } catch {
-      const message = 'We could not reach the server. Check your connection and try again.';
-      setError(message);
-      toast.error(message);
+      setError('We could not reach the server. Check your connection and try again.');
     } finally {
       setSubmitting(false);
     }
@@ -378,25 +368,14 @@ export function BookDemoFlow() {
           ) : null}
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Your name" htmlFor="demo-name" error={clientErrors.name} required>
-              <Input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                required
-                invalid={Boolean(clientErrors.name)}
-              />
+            <Field label="Your name" htmlFor="demo-name" required>
+              <Input value={name} onChange={(event) => setName(event.target.value)} required />
             </Field>
-            <Field label="Work email" htmlFor="demo-email" error={clientErrors.email} required>
-              <Input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-                invalid={Boolean(clientErrors.email)}
-              />
+            <Field label="Work email" htmlFor="demo-email" required>
+              <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
             </Field>
           </div>
-          <Field label="Business name" htmlFor="demo-company" hint="Optional" error={clientErrors.company}>
+          <Field label="Business name" htmlFor="demo-company" hint="Optional">
             <Input value={company} onChange={(event) => setCompany(event.target.value)} />
           </Field>
           <Field label="Anything specific you'd like covered?" htmlFor="demo-notes" hint="Optional">

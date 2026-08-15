@@ -8,7 +8,6 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { enforceRateLimit, limiters } from '@/lib/guards/rate-limit';
 import { fieldErrors } from '@/lib/validation/common';
 import { signInSchema } from '@/lib/validation/schemas';
-import { setFlashToast } from '@/lib/flash';
 import type { FormState } from '@/app/(auth)/actions';
 
 /**
@@ -61,6 +60,5 @@ export async function adminSignInAction(_prev: FormState, formData: FormData): P
     return genericFailure;
   }
 
-  await setFlashToast('success', 'Signed in to operations.');
   redirect('/admin');
 }

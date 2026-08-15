@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, Fraunces } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/components/theme-provider';
-import { FlashToast } from '@/components/flash-toast';
 import { cn } from '@/lib/utils';
 import './globals.css';
 
@@ -72,7 +71,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <ThemeProvider>
           {children}
-          <FlashToast />
           <Toaster
             position="top-right"
             richColors
