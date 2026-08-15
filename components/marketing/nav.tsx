@@ -104,13 +104,12 @@ export function InvoraMark({ className }: { className?: string }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src="/logo.png"
-      // Decorative: the "Invora" text beside it carries the name. The blend
-      // mode drops the artwork's white background into the cream nav surface —
-      // multiply leaves white transparent and everything darker untouched.
+      src="/logo-mark.png"
+      // Decorative: the "Invora" text beside it carries the name, so announcing
+      // the image too would just repeat it.
       alt=""
       aria-hidden
-      className={cn('h-10 w-auto shrink-0 object-contain mix-blend-multiply', className)}
+      className={cn('h-8 w-8 shrink-0 object-contain', className)}
     />
   );
 }
