@@ -13,7 +13,12 @@ const fraunces = Fraunces({
   display: 'swap',
 });
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+// `||` deliberately, not `??` — an env var that exists on the hosting platform
+// but was left blank reads as `''`, which `??` does not treat as absent (it
+// only falls back on null/undefined). `new URL('')` throws, and this runs at
+// module load for every route, so an empty value here took the whole build
+// down. `||` treats the empty string as falsy too, so it's covered either way.
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),

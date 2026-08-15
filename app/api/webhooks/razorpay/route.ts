@@ -235,7 +235,7 @@ async function handlePaymentCaptured(event: RazorpayEvent) {
   ]);
 
   if (customer?.email) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const mail = receiptEmail({
       businessName: business?.name || 'Your supplier',
       brandColor: business?.brand_color || '#16a34a',

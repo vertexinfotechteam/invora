@@ -100,7 +100,7 @@ export const POST = withApiErrors(async (request: NextRequest) => {
     : { data: null };
 
   if (business?.email) {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const mail = quoteDecisionEmail({
       businessName: business.name || 'Your business',
       brandColor: business.brand_color || '#4F46E5',

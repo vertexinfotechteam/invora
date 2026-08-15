@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 
-const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, '');
 
 /**
  * Everything that isn't a marketing page is disallowed here as a courtesy to

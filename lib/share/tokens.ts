@@ -69,7 +69,7 @@ export function isWellFormedToken(token: string): boolean {
 }
 
 export function buildShareUrl(docType: 'quotation' | 'invoice', token: string): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+  const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   const prefix = docType === 'quotation' ? 'q' : 'i';
   return `${base.replace(/\/$/, '')}/${prefix}/${token}`;
 }
