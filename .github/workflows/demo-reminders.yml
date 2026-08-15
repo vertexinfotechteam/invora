@@ -1,0 +1,26 @@
+name: Demo reminder emails
+
+# Vercel's Hobby plan only allows once-daily cron jobs, but the Meet-link
+# reminder (app/api/cron/demo-reminders) has to run every 15 minutes to reach
+# people ~2 hours before their booked demo — see vercel.json, which no longer
+# lists this job, and lib/email/templates.ts demoReminderEmail for why the
+# link is withheld until this send. This workflow is what actually fires it.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch: {} # lets you trigger a run by hand from the Actions tab
+
+jobs:
+  call-cron-endpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit /api/cron/demo-reminders
+        run: |
+          status=$(curl -s -o /tmp/body -w '%{http_code}' \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ vars.APP_URL }}/api/cron/demo-reminders")
+          cat /tmp/body
+          if [ "$status" -ge 300 ]; then
+            echo "cron endpoint returned HTTP $status"
+            exit 1
+          fi
