@@ -14,7 +14,7 @@ const COLUMNS = [
   {
     title: 'Company',
     links: [
-      { href: 'https://vertexinfotech.example', label: 'Vertex Infotech' },
+      { href: 'https://vertexinfotech.vercel.app', label: 'Vertex Infotech' },
       { href: '/#faq', label: 'FAQ' },
       { href: '/contact', label: 'Contact support' },
     ],
@@ -31,25 +31,27 @@ const COLUMNS = [
 
 export function MarketingFooter() {
   return (
-    <footer className="border-t border-border bg-muted/30">
+    <footer className="border-t border-navy-900 bg-navy-950 text-navy-300">
       <div className="container grid gap-10 py-14 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div className="space-y-3">
           <div className="flex items-center gap-2.5">
             <InvoraMark />
-            <span className="text-[17px] font-semibold tracking-tight">Invora</span>
+            <span className="font-wordmark text-[17px] font-semibold tracking-tight text-white">
+              Invora
+            </span>
           </div>
-          <p className="max-w-xs text-sm text-muted-foreground">
+          <p className="max-w-xs text-sm text-navy-400">
             Quotations, invoices and payments for service businesses — with an AI assistant that
             drafts the words and never touches the numbers.
           </p>
-          <p className="text-xs text-muted-foreground">
-            A product by <span className="font-medium text-foreground">Vertex Infotech</span>.
+          <p className="text-xs text-navy-400">
+            A product by <span className="font-medium text-navy-200">Vertex Infotech</span>.
           </p>
         </div>
 
         {COLUMNS.map((column) => (
           <div key={column.title} className="space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-navy-400">
               {column.title}
             </h3>
             <ul className="space-y-2">
@@ -57,7 +59,7 @@ export function MarketingFooter() {
                 <li key={link.label}>
                   <Link
                     href={link.href}
-                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                    className="text-sm text-navy-300 transition-colors hover:text-white"
                   >
                     {link.label}
                   </Link>
@@ -68,10 +70,20 @@ export function MarketingFooter() {
         ))}
       </div>
 
-      <div className="border-t border-border">
-        <div className="container flex flex-col items-center justify-between gap-2 py-5 text-xs text-muted-foreground sm:flex-row">
+      <div className="border-t border-navy-900">
+        <div className="container flex flex-col items-center justify-center gap-2 py-5 text-center text-xs text-navy-400">
           <p>© {new Date().getFullYear()} Vertex Infotech. All rights reserved.</p>
           <p>Payments processed securely by Razorpay. GST-ready documents.</p>
+          <p>
+            <a
+              href="https://vertexinfotech.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-navy-300 underline-offset-4 transition-colors hover:text-white hover:underline"
+            >
+              vertexinfotech.vercel.app
+            </a>
+          </p>
         </div>
       </div>
     </footer>

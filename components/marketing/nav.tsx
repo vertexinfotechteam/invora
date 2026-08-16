@@ -36,7 +36,7 @@ export function MarketingNav() {
       <nav className="container flex h-16 items-center justify-between" aria-label="Main">
         <Link href="/" onClick={goHome} className="flex items-center gap-2.5">
           <InvoraMark />
-          <span className="text-[17px] font-semibold tracking-tight">Invora</span>
+          <span className="font-wordmark text-[17px] font-semibold tracking-tight">Invora</span>
         </Link>
 
         <div className="hidden items-center gap-1 md:flex">

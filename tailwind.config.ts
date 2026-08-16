@@ -82,6 +82,7 @@ const config: Config = {
         sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         serif: ['var(--font-serif)', 'Georgia', 'ui-serif', 'serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        wordmark: ['var(--font-wordmark)', 'var(--font-sans)', 'ui-sans-serif', 'sans-serif'],
       },
       transitionTimingFunction: {
         // Named so call sites use `ease-reveal` instead of an arbitrary-value

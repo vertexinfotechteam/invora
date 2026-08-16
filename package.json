@@ -15,7 +15,8 @@
     "test:e2e": "playwright test",
     "db:push": "supabase db push",
     "db:reset": "supabase db reset",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "set-admin": "tsx -r dotenv/config scripts/set-admin.ts dotenv_config_path=.env.local"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "latest",

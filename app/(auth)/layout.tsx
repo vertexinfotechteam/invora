@@ -19,7 +19,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <div className="flex flex-col px-6 py-6 sm:px-10 lg:h-dvh lg:overflow-y-auto">
         <Link href="/" className="flex w-fit items-center gap-2.5">
           <InvoraMark />
-          <span className="text-[17px] font-semibold tracking-tight">Invora</span>
+          <span className="font-wordmark text-[17px] font-semibold tracking-tight">Invora</span>
         </Link>
 
         <div className="flex flex-1 items-center justify-center py-6 sm:py-8">

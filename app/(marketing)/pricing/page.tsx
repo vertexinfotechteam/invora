@@ -243,8 +243,8 @@ function PlanCard({
       </ul>
 
       {comingSoon ? (
-        <Button disabled className="mt-7 w-full" variant="outline">
-          Coming soon
+        <Button asChild className="mt-7 w-full" variant="outline">
+          <Link href="/coming-soon">Coming soon</Link>
         </Button>
       ) : cta ? (
         <Button asChild variant={cta.variant} className="mt-7 w-full">

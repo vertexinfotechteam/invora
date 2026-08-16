@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Fraunces } from 'next/font/google';
+import { Inter, Fraunces, Plus_Jakarta_Sans } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/components/theme-provider';
 import { cn } from '@/lib/utils';
@@ -11,6 +11,15 @@ const fraunces = Fraunces({
   subsets: ['latin'],
   variable: '--font-serif',
   weight: ['500', '600'],
+  display: 'swap',
+});
+// Instagram Sans itself is Meta's unlicensed in-house font, so this stands in
+// for it on the "Invora" wordmark — closest freely-licensed match in shape
+// (rounded geometric grotesque) and weight.
+const wordmark = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-wordmark',
+  weight: ['600', '700'],
   display: 'swap',
 });
 
@@ -68,7 +77,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={cn(inter.variable, fraunces.variable)}>
+    <html lang="en" suppressHydrationWarning className={cn(inter.variable, fraunces.variable, wordmark.variable)}>
       <body>
         <ThemeProvider>
           {children}
