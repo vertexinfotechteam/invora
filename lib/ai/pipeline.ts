@@ -5,7 +5,7 @@ import { z } from 'zod/v4';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 
 import { getAnthropic } from '@/lib/ai/client';
-import { callGeminiJson, GEMINI_MODEL } from '@/lib/ai/gemini-client';
+import { callGeminiJson, GEMINI_MODEL, toGeminiSchema } from '@/lib/ai/gemini-client';
 import { resolveAiProvider } from '@/lib/ai/provider';
 import { logAiUsage } from '@/lib/ai/logging';
 import {
@@ -290,7 +290,14 @@ async function runGemini<TSchema extends z.ZodTypeAny>(
     throw payloadTooLarge('That request is too large. Trim the brief and try again.');
   }
 
-  const response = await callGeminiJson(system, request.userContent, maxTokens);
+  // The same Zod schema the response is validated against is handed to Gemini
+  // up front, so it constrains generation instead of only judging it after.
+  const response = await callGeminiJson(
+    system,
+    request.userContent,
+    maxTokens,
+    toGeminiSchema(request.schema),
+  );
   const latencyMs = Date.now() - startedAt;
 
   if (response.finishReason === 'SAFETY' || response.finishReason === 'PROHIBITED_CONTENT') {

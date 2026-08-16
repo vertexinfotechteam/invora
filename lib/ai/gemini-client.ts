@@ -1,5 +1,10 @@
 import 'server-only';
 
+// Must match lib/ai/schemas.ts — the schemas are Zod v4, whose toJSONSchema is
+// built in. The separate zod-to-json-schema package is v3-only and silently
+// produces something Gemini ignores.
+import { z } from 'zod/v4';
+
 /**
  * SERVER ONLY.
  *
@@ -133,12 +138,71 @@ export async function callGeminiJson(
   systemPrompt: string,
   userContent: string,
   maxOutputTokens: number,
+  responseSchema?: unknown,
 ): Promise<GeminiJsonResult> {
   const result = await requestGemini({
     system_instruction: { parts: [{ text: systemPrompt }] },
     contents: [{ role: 'user', parts: [{ text: userContent }] }],
-    generationConfig: { maxOutputTokens, responseMimeType: 'application/json' },
+    generationConfig: {
+      maxOutputTokens,
+      responseMimeType: 'application/json',
+      // Constrains the *shape*, not just the syntax. Without it Gemini invents
+      // its own field names and the caller's Zod parse rejects the result —
+      // quotation generation, rewrite and translate all failed that way, while
+      // the command bar passed only because its shape was simple enough to
+      // guess. Optional so callers without a schema behave exactly as before.
+      ...(responseSchema ? { responseSchema } : {}),
+    },
   });
 
   return { text: result.text, model: GEMINI_MODEL, finishReason: result.finishReason, usage: result.usage };
+}
+
+/**
+ * Converts a Zod schema into the dialect Gemini accepts.
+ *
+ * Gemini implements a subset of JSON Schema: it rejects `$ref`/`$schema`,
+ * `additionalProperties`, and unknown string formats outright, so the raw
+ * converter output cannot be sent as-is.
+ */
+export function toGeminiSchema(zodSchema: unknown): unknown {
+  // `io: 'output'` describes what the model must produce; `target: 'draft-7'`
+  // avoids the 2020-12 keywords Gemini does not implement.
+  const json = z.toJSONSchema(zodSchema as z.ZodType, {
+    io: 'output',
+    target: 'draft-7',
+    unrepresentable: 'any',
+  });
+  return stripUnsupported(json);
+}
+
+const ALLOWED_STRING_FORMATS = new Set(['date-time', 'date', 'time', 'duration', 'email']);
+
+function stripUnsupported(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(stripUnsupported);
+  if (!node || typeof node !== 'object') return node;
+
+  const source = node as Record<string, unknown>;
+
+  // Zod renders `T | null` as anyOf[T, {type:'null'}]. Gemini has no null type
+  // and rejects the whole request with a bare "invalid argument"; it expresses
+  // the same thing as `nullable: true` on the non-null branch. Quotation
+  // drafts hit this via suggestedRatePaise, which is number | null.
+  const anyOf = source.anyOf;
+  if (Array.isArray(anyOf)) {
+    const branches = anyOf as Record<string, unknown>[];
+    const nonNull = branches.filter((b) => b?.type !== 'null');
+    if (nonNull.length === 1 && branches.length !== nonNull.length) {
+      const { anyOf: _drop, ...rest } = source;
+      return stripUnsupported({ ...nonNull[0], ...rest, nullable: true });
+    }
+  }
+
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(source)) {
+    if (key === 'additionalProperties' || key === '$schema' || key === 'default') continue;
+    if (key === 'format' && typeof value === 'string' && !ALLOWED_STRING_FORMATS.has(value)) continue;
+    out[key] = stripUnsupported(value);
+  }
+  return out;
 }
