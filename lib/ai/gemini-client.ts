@@ -200,7 +200,20 @@ function stripUnsupported(node: unknown): unknown {
 
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(source)) {
-    if (key === 'additionalProperties' || key === '$schema' || key === 'default') continue;
+    // `maxItems` is the one that made quotation generation fail: Gemini's
+    // schema dialect rejects it and returns a bare "invalid argument" naming
+    // no field, so it looked like the whole schema was unsupported. Found by
+    // stripping keywords one at a time until the API returned 200. The bound
+    // is not lost — the Zod schema still enforces it when the response is
+    // validated, which is where it actually has to hold.
+    if (
+      key === 'additionalProperties' ||
+      key === '$schema' ||
+      key === 'default' ||
+      key === 'maxItems'
+    ) {
+      continue;
+    }
     if (key === 'format' && typeof value === 'string' && !ALLOWED_STRING_FORMATS.has(value)) continue;
     out[key] = stripUnsupported(value);
   }
