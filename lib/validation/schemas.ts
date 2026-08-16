@@ -326,3 +326,13 @@ export const adminSubscriptionSchema = adminActionSchema.extend({
   action: z.enum(['activate', 'cancel', 'suspend', 'reactivate']),
   plan_code: z.string().trim().max(40).optional(),
 });
+
+export const adminAccountStatusSchema = adminActionSchema.extend({
+  action: z.enum(['suspend', 'unsuspend']),
+});
+
+export const adminDeleteAccountSchema = adminActionSchema.extend({
+  // Must exactly match the account's email — the confirmation step that
+  // stands between a misclick and permanently destroying a tenant's data.
+  confirm_email: z.string().trim().min(1, 'Type the account email to confirm.'),
+});
