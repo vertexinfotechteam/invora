@@ -35,7 +35,13 @@ export function MarketingFooter() {
       <div className="container grid gap-10 py-14 md:grid-cols-[1.4fr_repeat(3,1fr)]">
         <div className="space-y-3">
           <div className="flex items-center gap-2.5">
-            <InvoraMark />
+            {/* The brand mark's letterform is deep navy, which all but vanishes
+                against this footer's near-black. A light tile gives it the pale
+                ground it was drawn for; every other placement sits on cream and
+                needs no such help. */}
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-navy-50">
+              <InvoraMark className="h-7 w-7" />
+            </span>
             <span className="font-wordmark text-[17px] font-semibold tracking-tight text-white">
               Invora
             </span>
